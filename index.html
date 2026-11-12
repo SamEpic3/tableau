@@ -52,6 +52,11 @@
     stroke-linejoin:round;display:block;pointer-events:none}
   .tool .main,button.ic{display:flex;align-items:center;justify-content:center}
   button.ic{width:44px;padding:0}
+  #bgMenu{position:fixed;z-index:7;min-width:200px;padding:6px;background:#fff;border:1px solid var(--line);
+    border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.18);display:none}
+  #bgMenu.show{display:block}
+  #bgMenu button{display:flex;width:100%;height:44px;align-items:center;gap:12px;padding:0 12px;text-align:left}
+  #bgMenu button.on{background:var(--on);color:var(--onink)}
   #menu{position:fixed;z-index:7;min-width:210px;padding:6px;background:#fff;border:1px solid var(--line);
     border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.18);display:none}
   #menu.show{display:block}
@@ -59,10 +64,13 @@
     gap:18px;padding:0 12px;text-align:left}
   #menu .kbd{font-size:12px;color:#888}
   #menu .msep{height:1px;background:var(--line);margin:4px 6px}
-  #selDel{position:fixed;z-index:6;display:none;align-items:center;gap:6px;height:44px;padding:0 14px;border-radius:22px;
-    border:1px solid #e0b4b4;background:#fff;color:#c92a2a;font:inherit;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.18);cursor:pointer}
-  #selDel:active{background:#fff0f0}
-  #selDel svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  #selBar{position:fixed;z-index:6;display:none;gap:8px}
+  #selBar .sb{display:flex;align-items:center;gap:6px;height:44px;padding:0 14px;border-radius:22px;
+    border:1px solid var(--line);background:#fff;color:var(--ink);font:inherit;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.18);cursor:pointer}
+  #selBar .sb:active{background:var(--hover)}
+  #selDel{border-color:#e0b4b4 !important;color:#c92a2a !important}
+  #selDel:active{background:#fff0f0 !important}
+  #selBar svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
   #drop{position:fixed;inset:0;z-index:8;display:none;align-items:center;justify-content:center;
     box-sizing:border-box;background:rgba(36,80,200,.10);border:3px dashed var(--onink);
     color:var(--onink);font-size:24px;pointer-events:none}
@@ -76,6 +84,9 @@
   #pop .sw{width:34px;height:34px;margin:0}
   #pop .hint{font-size:12px;color:#777;min-height:16px;margin:0 0 2px}
   #pop .modes{display:none;gap:8px}
+  #pop .shapes{display:none;gap:6px;margin:2px 0 8px}
+  #pop .shapes button{flex:1;height:44px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);background:#fff}
+  #pop .shapes button.on{background:var(--on);color:var(--onink);border-color:#9db8ff}
   #pop .modes button{flex:1;height:44px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);background:#fff}
   #pop .modes button.on{background:var(--on);color:var(--onink);border-color:#9db8ff}
   #pop{position:fixed;z-index:7;width:230px;box-sizing:border-box;padding:12px 14px;background:#fff;
@@ -102,6 +113,7 @@
   <div class="bl">
     <div class="tool on" id="gPen"><button class="main" id="bPen" title="Stylo (P)" aria-label="Stylo"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.2 6.8a1 1 0 0 0-4-4L3.8 16.2a2 2 0 0 0-.5.8L2 21.4a.5.5 0 0 0 .6.6l4.4-1.3a2 2 0 0 0 .8-.5z"/><path d="m15 5 4 4"/></svg></button><button class="arrow" id="aPen" title="Couleur et diamètre du stylo">▾</button></div>
     <div class="tool" id="gHl"><button class="main" id="bHl" title="Surligneur (H)" aria-label="Surligneur"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg></button><button class="arrow" id="aHl" title="Couleur et diamètre du surligneur">▾</button></div>
+    <div class="tool" id="gShp"><button class="main" id="bShp" title="Formes : ligne (F)" aria-label="Formes"><span id="shpIcon" style="display:contents"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5"/></svg></span></button><button class="arrow" id="aShp" title="Forme, couleur et épaisseur">▾</button></div>
     <div class="tool" id="gEra"><button class="main" id="bEra" title="Gomme (E)" aria-label="Gomme"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg></button><button class="arrow" id="aEra" title="Diamètre de la gomme">▾</button></div>
     <div class="tool" id="gSel"><button class="main" id="bSel" title="Sélection (S)" aria-label="Sélection"><span id="selIcon" style="display:contents"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3a2 2 0 0 0-2 2"/><path d="M19 3a2 2 0 0 1 2 2"/><path d="M21 19a2 2 0 0 1-2 2"/><path d="M5 21a2 2 0 0 1-2-2"/><path d="M9 3h1"/><path d="M9 21h1"/><path d="M14 3h1"/><path d="M14 21h1"/><path d="M3 9v1"/><path d="M21 9v1"/><path d="M3 14v1"/><path d="M21 14v1"/></svg></span></button><button class="arrow" id="aSel" title="Mode de sélection">▾</button></div>
     <span class="sep"></span>
@@ -114,8 +126,17 @@
     <button id="bFull" class="ic" title="Plein écran" aria-label="Plein écran"><svg class="i" id="fullIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 15 6 6"/><path d="m15 9 6-6"/><path d="M21 16v5h-5"/><path d="M21 8V3h-5"/><path d="M3 16v5h5"/><path d="m3 21 6-6"/><path d="M3 8V3h5"/><path d="M9 9 3 3"/></svg></button>
   </div>
   <div class="br">
+    <button id="bBg" class="ic" title="Fond de page" aria-label="Fond de page"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg></button>
     <button id="bMenu" class="ic" title="Fichier" aria-label="Menu fichier"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg></button>
   </div>
+</div>
+
+<div id="bgMenu">
+  <button data-bg="plain"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/></svg><span>Uni</span></button>
+  <button data-bg="grid"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg><span>Quadrillé</span></button>
+  <button data-bg="dots"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 8h.01"/><path d="M12 8h.01"/><path d="M16 8h.01"/><path d="M8 12h.01"/><path d="M12 12h.01"/><path d="M16 12h.01"/><path d="M8 16h.01"/><path d="M12 16h.01"/><path d="M16 16h.01"/></svg><span>Pointillé</span></button>
+  <button data-bg="lines"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/></svg><span>Ligné</span></button>
+  <button data-bg="iso"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 3v18"/><path d="M3 7.5 21 16.5"/><path d="M3 16.5 21 7.5"/></svg><span>Isométrique</span></button>
 </div>
 
 <div id="menu">
@@ -127,10 +148,11 @@
   <button id="bSave"><span>Enregistrer</span><span class="kbd">Ctrl+S</span></button>
 </div>
 
-<button id="selDel" title="Effacer la sélection (Suppr)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>Effacer</button>
+<div id="selBar"><button class="sb" id="selDup" title="Dupliquer (Ctrl+D)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Dupliquer</button><button class="sb" id="selDel" title="Effacer la sélection (Suppr)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>Effacer</button></div>
 <div id="drop">Déposez un PDF, une image ou un projet (.json)</div>
 
 <div id="pop">
+  <div class="shapes" id="popShapes"><button data-shape="line" title="Ligne" aria-label="Ligne"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5"/></svg></button><button data-shape="arrow" title="Flèche" aria-label="Flèche"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5"/><path d="M9 5h10v10"/></svg></button><button data-shape="rect" title="Rectangle" aria-label="Rectangle"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="14" x="3" y="5" rx="1"/></svg></button><button data-shape="ellipse" title="Ellipse" aria-label="Ellipse"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="10" ry="7.5"/></svg></button></div>
   <div class="row"><span id="popTitle"></span><span class="val" id="popVal"></span></div>
   <input type="range" id="popRange" min="1" max="40" step="1" value="3">
   <div class="hint" id="popHint"></div>
@@ -212,7 +234,9 @@ let images = [];                        // images importées : { el, src, x, y, 
 let undoStack = [], redoStack = [];
 let tool = 'pen';                       // 'pen' | 'hl' | 'eraser'
 let penColor = '#111111', hlColor = '#ffd43b';
-let penPx = 3, hlPx = 18, eraserPx = 48;   // stylo et surligneur : px à 100 % de zoom (suivent le zoom) ; gomme : px à l'écran
+let penPx = 3, hlPx = 18, eraserPx = 48, shapePx = 3;
+let shapeColor = '#111111', shapeKind = 'line';   // 'line' | 'arrow' | 'rect' | 'ellipse'
+let bgMode = 'plain';                    // 'plain' | 'grid' | 'dots' | 'lines' | 'iso'   // stylo et surligneur : px à 100 % de zoom (suivent le zoom) ; gomme : px à l'écran
 
 let pages = [], pdfBytes = null, pdfDoc = null, pdfName = '';
 let fileHandle = null;
@@ -244,7 +268,7 @@ function computeBB(pts) {
   for (const p of pts) { if (p[0] < a) a = p[0]; if (p[0] > c) c = p[0]; if (p[1] < b) b = p[1]; if (p[1] > d) d = p[1]; }
   return [a, b, c, d];
 }
-const mk = (c, w, pts, hl) => ({ color: c, w, pts, hl: !!hl, bb: computeBB(pts) });
+const mk = (c, w, pts, hl, sh) => ({ color: c, w, pts, hl: !!hl, sh: !!sh, bb: computeBB(pts) });   // sh : forme (segments droits)
 
 /* ---------- affichage ---------- */
 let rafPending = false;
@@ -277,6 +301,11 @@ function drawStroke(c, st) {
   c.lineWidth = st.w; c.lineCap = 'round'; c.lineJoin = 'round';
   if (p.length === 1) {
     c.beginPath(); c.arc(p[0][0], p[0][1], st.w / 2, 0, Math.PI * 2); c.fill();
+  } else if (st.sh) {
+    c.beginPath();
+    c.moveTo(p[0][0], p[0][1]);
+    for (let i = 1; i < p.length; i++) c.lineTo(p[i][0], p[i][1]);
+    c.stroke();
   } else {
     c.beginPath();
     c.moveTo(p[0][0], p[0][1]);
@@ -295,6 +324,7 @@ function draw() {
   rafPending = false;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, cv.width, cv.height);
+  drawBackground();
   ctx.setTransform(dpr * view.s, 0, 0, dpr * view.s, dpr * view.tx, dpr * view.ty);
 
   for (const p of pages) {
@@ -328,6 +358,80 @@ function draw() {
   updatePageBox();
   if (popFor) updatePop();
 }
+
+/* ---------- fond de page (quadrillé, pointillé, ligné, isométrique) ---------- */
+const BG_STEP = 25;   // pas de la grille en px de page (à 100 % de zoom)
+function drawBackground() {
+  if (bgMode === 'plain') return;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.save();
+  let step = BG_STEP * (bgMode === 'iso' ? Math.sqrt(3) / 2 : 1) * view.s, major = 5;
+  const minStep = bgMode === 'dots' ? 14 : 9;
+  while (step < minStep) { step *= 5; }
+  const ox = view.tx, oy = view.ty;
+  if (bgMode === 'dots') {
+    ctx.fillStyle = '#c3c9d4';
+    const r = step > 30 ? 1.6 : 1.2;
+    const i0 = Math.floor(-ox / step), i1 = Math.ceil((W - ox) / step);
+    const j0 = Math.floor(-oy / step), j1 = Math.ceil((H - oy) / step);
+    for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) ctx.fillRect(ox + i * step - r, oy + j * step - r, 2 * r, 2 * r);
+    ctx.restore(); return;
+  }
+  // familles de droites, chacune donnée par sa normale (angle en degrés)
+  const fam = bgMode === 'grid' ? [0, 90] : bgMode === 'lines' ? [90] : [0, 60, 120];
+  const L = W + H;
+  for (const deg of fam) {
+    const a = deg * Math.PI / 180, nx = Math.cos(a), ny = Math.sin(a), dx = -ny, dy = nx;
+    // projection des coins de l'écran sur la normale, mesurée depuis l'origine du monde
+    const pr = [[0, 0], [W, 0], [0, H], [W, H]].map(q => (q[0] - ox) * nx + (q[1] - oy) * ny);
+    const k0 = Math.floor(Math.min(...pr) / step), k1 = Math.ceil(Math.max(...pr) / step);
+    for (const pass of [0, 1]) {   // lignes fines, puis lignes principales
+      ctx.beginPath();
+      for (let k = k0; k <= k1; k++) {
+        const isMajor = bgMode !== 'lines' && k % major === 0;
+        if (isMajor !== (pass === 1)) continue;
+        const px = ox + nx * k * step, py = oy + ny * k * step;
+        // point de la droite le plus proche du centre de l'écran, puis segment assez long pour tout couvrir
+        const t = (W / 2 - px) * dx + (H / 2 - py) * dy;
+        const cx = px + dx * t, cy = py + dy * t;
+        ctx.moveTo(cx - dx * L, cy - dy * L); ctx.lineTo(cx + dx * L, cy + dy * L);
+      }
+      ctx.lineWidth = 1; ctx.strokeStyle = pass ? '#d3d8e1' : '#e7eaf0';
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+/* ---------- formes (ligne, flèche, rectangle, ellipse) ---------- */
+function shapePoints(kind, a, b, constrain, w) {
+  let dx = b.x - a.x, dy = b.y - a.y;
+  if (kind === 'line' || kind === 'arrow') {
+    const len = Math.hypot(dx, dy);
+    let ang = Math.atan2(dy, dx);
+    if (constrain) ang = Math.round(ang / (Math.PI / 12)) * (Math.PI / 12);          // Maj : par pas de 15°
+    else {
+      const q = Math.round(ang / (Math.PI / 4)) * (Math.PI / 4);                  // aimant à 0°, 45°, 90°… (±4°)
+      if (Math.abs(ang - q) < 4 * Math.PI / 180) ang = q;
+    }
+    const ex = a.x + Math.cos(ang) * len, ey = a.y + Math.sin(ang) * len;
+    if (kind === 'line') return [[a.x, a.y], [ex, ey]];
+    const hl = Math.min(len * 0.5, Math.max(14, w * 4)), ha = 28 * Math.PI / 180;
+    const back = ang + Math.PI;
+    return [[a.x, a.y], [ex, ey],
+            [ex + Math.cos(back + ha) * hl, ey + Math.sin(back + ha) * hl], [ex, ey],
+            [ex + Math.cos(back - ha) * hl, ey + Math.sin(back - ha) * hl]];
+  }
+  if (constrain) { const m = Math.max(Math.abs(dx), Math.abs(dy)); dx = Math.sign(dx || 1) * m; dy = Math.sign(dy || 1) * m; }
+  const x0 = Math.min(a.x, a.x + dx), x1 = Math.max(a.x, a.x + dx), y0 = Math.min(a.y, a.y + dy), y1 = Math.max(a.y, a.y + dy);
+  if (kind === 'rect') return [[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]];
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, rx = (x1 - x0) / 2, ry = (y1 - y0) / 2;
+  const per = 2 * Math.PI * Math.sqrt((rx * rx + ry * ry) / 2) * view.s;
+  const n = clamp(Math.ceil(per / 5), 24, 360), out = [];
+  for (let i = 0; i <= n; i++) { const t = i / n * Math.PI * 2; out.push([cx + rx * Math.cos(t), cy + ry * Math.sin(t)]); }
+  return out;
+}
+let shiftDown = false;
 
 /* ---------- PDF ---------- */
 function wantedRs(p) {
@@ -513,7 +617,7 @@ function eraseAt(sx, sy) {
     if (w.x < b[0] - m || w.x > b[2] + m || w.y < b[1] - m || w.y > b[3] + m) continue;
     const pieces = splitByCircle(st.pts, w.x, w.y, m);
     if (!pieces) continue;
-    const after = pieces.map(pts => mk(st.color, st.w, pts, st.hl));
+    const after = pieces.map(pts => mk(st.color, st.w, pts, st.hl, st.sh));
     erasing.ops.push({ i, before: st, after });
     strokes.splice(i, 1, ...after);
   }
@@ -614,7 +718,7 @@ function selectByPolygon(poly) {
     if (b[2] + m < pbb[0] || b[0] - m > pbb[2] || b[3] + m < pbb[1] || b[1] - m > pbb[3]) continue;
     const pcs = splitByPolygon(st.pts, poly, pbb);
     if (pcs.length <= 1) { if (pcs.length === 1 && pcs[0].inside) picked.push(st); continue; }
-    const after = pcs.map(c => mk(st.color, st.w, c.pts, st.hl));
+    const after = pcs.map(c => mk(st.color, st.w, c.pts, st.hl, st.sh));
     ops.push({ i, before: st, after });
     strokes.splice(i, 1, ...after);
     pcs.forEach((c, k) => { if (c.inside) picked.push(after[k]); });
@@ -791,19 +895,33 @@ function endSelect(e) {
   selectByPolygon(poly);
 }
 
-const selDelBtn = document.getElementById('selDel');
-selDelBtn.addEventListener('pointerdown', e => e.stopPropagation());
-selDelBtn.onclick = () => { deleteSelection(); selDelBtn.style.display = 'none'; };
+const selBar = document.getElementById('selBar'), selDelBtn = document.getElementById('selDel');
+selBar.addEventListener('pointerdown', e => e.stopPropagation());
+selDelBtn.onclick = () => { deleteSelection(); selBar.style.display = 'none'; };
+document.getElementById('selDup').onclick = () => duplicateSelection();
+function duplicateSelection() {
+  if (!sel) return;
+  const off = 24 / view.s;   // décalage de 24 px à l'écran
+  const ns = sel.strokes.map(st => mk(st.color, st.w, st.pts.map(q => [q[0] + off, q[1] + off]), st.hl, st.sh));
+  const ni = (sel.images || []).map(im => ({ el: im.el, src: im.src, x: im.x + off, y: im.y + off, w: im.w, h: im.h }));
+  strokes.push(...ns); images.push(...ni);
+  const dup = { t: 'dup', strokes: ns, images: ni };
+  const pend = sel.pendingOps && sel.pendingOps.length ? sel.pendingOps : null;
+  undoStack.push(pend ? { t: 'group', acts: [{ t: 'edit', ops: pend }, dup] } : dup);
+  redoStack = [];
+  sel = { strokes: ns, images: ni, bb: selBBox(ns, ni), pendingOps: null };   // la copie devient la sélection
+  requestDraw();
+}
 function placeSelDel() {
-  if (!sel || selGesture) { selDelBtn.style.display = 'none'; return; }
+  if (!sel || selGesture) { selBar.style.display = 'none'; return; }
   const B = selBoxScreen();
-  selDelBtn.style.display = 'flex';
-  const w = selDelBtn.offsetWidth || 100, h = 44;
+  selBar.style.display = 'flex';
+  const w = selBar.offsetWidth || 220, h = 44;
   let x = (B[0] + B[2]) / 2 - w / 2, y = B[3] + 18;
   if (y + h > innerHeight - 8) y = B[1] - 18 - h;          // pas de place en bas : au-dessus
   if (y < 60) y = Math.min(Math.max(60, B[3] - h - 12), innerHeight - h - 8);   // ni en haut : à l'intérieur
   x = Math.max(8, Math.min(innerWidth - w - 8, x));
-  selDelBtn.style.left = x + 'px'; selDelBtn.style.top = y + 'px';
+  selBar.style.left = x + 'px'; selBar.style.top = y + 'px';
 }
 function drawSelectionOverlay() {
   placeSelDel();
@@ -846,6 +964,10 @@ function undoAct(a) {
     for (const it of (a.imgs || [])) Object.assign(it.im, it.b);
   }
   else if (a.t === 'imgadd') { const i = images.indexOf(a.im); if (i >= 0) images.splice(i, 1); }
+  else if (a.t === 'dup') {
+    for (const st of a.strokes) { const i = strokes.indexOf(st); if (i >= 0) strokes.splice(i, 1); }
+    for (const im of a.images) { const i = images.indexOf(im); if (i >= 0) images.splice(i, 1); }
+  }
   else if (a.t === 'imgdel') { for (let k = a.items.length - 1; k >= 0; k--) images.splice(a.items[k].i, 0, a.items[k].im); }
   else if (a.t === 'group') { for (let k = a.acts.length - 1; k >= 0; k--) undoAct(a.acts[k]); }
 }
@@ -857,6 +979,7 @@ function redoAct(a) {
     for (const it of (a.imgs || [])) Object.assign(it.im, it.a);
   }
   else if (a.t === 'imgadd') images.push(a.im);
+  else if (a.t === 'dup') { strokes.push(...a.strokes); images.push(...a.images); }
   else if (a.t === 'imgdel') { for (const o of a.items) { const i = images.indexOf(o.im); if (i >= 0) images.splice(i, 1); } }
   else if (a.t === 'group') { for (const x of a.acts) redoAct(x); }
 }
@@ -903,6 +1026,10 @@ cv.addEventListener('pointerdown', e => {
   } else if (tool === 'eraser' || eraserBtn) {
     erasing = { id: e.pointerId, ops: [], last: { x: e.clientX, y: e.clientY } };
     eraseAt(e.clientX, e.clientY);
+  } else if (tool === 'shape') {
+    const w = toWorld(e.clientX, e.clientY);
+    drawing = { id: e.pointerId, shape: true, a: w, sx: e.clientX, sy: e.clientY, st: mk(shapeColor, shapePx, [[w.x, w.y]], false, true) };
+    strokes.push(drawing.st);
   } else {
     const w = toWorld(e.clientX, e.clientY);
     const hl = tool === 'hl';
@@ -930,6 +1057,13 @@ cv.addEventListener('pointermove', e => {
     panning.x = e.clientX; panning.y = e.clientY;
     touchView(); return;
   }
+  if (drawing && drawing.id === e.pointerId && drawing.shape) {
+    drawing.ex = e.clientX; drawing.ey = e.clientY;
+    const st = drawing.st;
+    st.pts = shapePoints(shapeKind, drawing.a, toWorld(e.clientX, e.clientY), e.shiftKey || shiftDown, st.w);
+    st.bb = computeBB(st.pts);
+    requestDraw(); return;
+  }
   if (drawing && drawing.id === e.pointerId) {
     const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
     for (const ev of (evs.length ? evs : [e])) addPoint(ev.clientX, ev.clientY);
@@ -954,7 +1088,8 @@ function endPointer(e) {
   }
   if (panning && panning.id === e.pointerId) { panning = null; return; }
   if (drawing && drawing.id === e.pointerId) {
-    if (e.type === 'pointercancel') {
+    const tiny = drawing.shape && (drawing.ex === undefined || Math.hypot(drawing.ex - drawing.sx, drawing.ey - drawing.sy) < 4);
+    if (e.type === 'pointercancel' || tiny) {   // une forme minuscule (simple appui) n'est pas gardée
       const i = strokes.lastIndexOf(drawing.st); if (i >= 0) strokes.splice(i, 1);
     } else {
       undoStack.push({ t: 'add', st: drawing.st }); redoStack = [];
@@ -980,27 +1115,30 @@ cv.addEventListener('wheel', e => {
 
 /* ---------- barre d'outils ---------- */
 const gPen = document.getElementById('gPen'), gHl = document.getElementById('gHl'),
-      gEra = document.getElementById('gEra'), gSel = document.getElementById('gSel');
+      gEra = document.getElementById('gEra'), gSel = document.getElementById('gSel'), gShp = document.getElementById('gShp');
+const popShapes = document.getElementById('popShapes');
 const pop = document.getElementById('pop');
 const popTitle = document.getElementById('popTitle'), popVal = document.getElementById('popVal');
 const popRange = document.getElementById('popRange'), popDot = document.getElementById('popDot');
 const popColors = document.getElementById('popColors'), popHint = document.getElementById('popHint');
 const popPrev = document.getElementById('popPrev'), popModes = document.getElementById('popModes');
 const mRect = document.getElementById('mRect'), mLasso = document.getElementById('mLasso');
-let popFor = null;   // 'pen' | 'hl' | 'eraser' | 'sel' | null
+let popFor = null;   // 'pen' | 'hl' | 'shape' | 'eraser' | 'sel' | null
 
 const PALETTES = {
   pen: ['#111111', '#868e96', '#e03131', '#f08c00', '#2f9e44', '#1971c2', '#7048e8', '#d6336c'],
   hl:  ['#ffd43b', '#69db7c', '#ff8fab', '#4dabf7']
 };
+PALETTES.shape = PALETTES.pen;
 const POP_CFG = {
   pen:    { title: 'Diamètre du stylo',      min: 1,  max: 40 },
   hl:     { title: 'Diamètre du surligneur', min: 6,  max: 80 },
+  shape:  { title: 'Épaisseur du trait',     min: 1,  max: 40 },
   eraser: { title: 'Diamètre de la gomme',   min: 10, max: 200 },
   sel:    { title: 'Mode de sélection' }
 };
-const getSize = w => w === 'eraser' ? eraserPx : w === 'hl' ? hlPx : penPx;
-const getColor = w => w === 'hl' ? hlColor : penColor;
+const getSize = w => w === 'eraser' ? eraserPx : w === 'hl' ? hlPx : w === 'shape' ? shapePx : penPx;
+const getColor = w => w === 'hl' ? hlColor : w === 'shape' ? shapeColor : penColor;
 
 function setTool(t) {
   tool = t;
@@ -1010,6 +1148,7 @@ function setTool(t) {
   gHl.classList.toggle('on', t === 'hl');
   gEra.classList.toggle('on', t === 'eraser');
   gSel.classList.toggle('on', t === 'sel');
+  gShp.classList.toggle('on', t === 'shape');
   requestDraw();
 }
 
@@ -1019,6 +1158,14 @@ function updateModes() {
   document.getElementById('selIcon').innerHTML = (selMode === 'lasso' ? mLasso : mRect).innerHTML;
   document.getElementById('bSel').title = 'Sélection : ' + (selMode === 'lasso' ? 'main levée' : 'rectangle') + ' (S)';
 }
+const SHAPE_NAMES = { line: 'ligne', arrow: 'flèche', rect: 'rectangle', ellipse: 'ellipse' };
+function updateShapes() {
+  let cur = null;
+  for (const b of popShapes.children) { const on = b.dataset.shape === shapeKind; b.classList.toggle('on', on); if (on) cur = b; }
+  if (cur) document.getElementById('shpIcon').innerHTML = cur.innerHTML;
+  document.getElementById('bShp').title = 'Formes : ' + SHAPE_NAMES[shapeKind] + ' (F)';
+}
+for (const b of popShapes.children) b.onclick = () => { shapeKind = b.dataset.shape; updateShapes(); setTool('shape'); };
 mRect.onclick = () => { selMode = 'rect'; updateModes(); closePop(); };
 mLasso.onclick = () => { selMode = 'lasso'; updateModes(); closePop(); };
 
@@ -1033,7 +1180,7 @@ function buildColors() {
     b.style.background = c;
     b.setAttribute('aria-label', 'Couleur ' + c);
     b.onclick = () => {
-      if (popFor === 'hl') hlColor = c; else penColor = c;
+      if (popFor === 'hl') hlColor = c; else if (popFor === 'shape') shapeColor = c; else penColor = c;
       buildColors(); updatePop();
     };
     popColors.appendChild(b);
@@ -1067,6 +1214,8 @@ function openPop(which, anchor) {
   popTitle.textContent = cfg.title;
   popRange.style.display = popHint.style.display = popPrev.style.display = isSel ? 'none' : '';
   popModes.style.display = isSel ? 'flex' : 'none';
+  popShapes.style.display = which === 'shape' ? 'flex' : 'none';
+  if (which === 'shape') updateShapes();
   if (isSel) { popVal.textContent = ''; popColors.style.display = 'none'; updateModes(); }
   else {
     popRange.min = cfg.min; popRange.max = cfg.max; popRange.value = getSize(which);
@@ -1090,6 +1239,22 @@ function toggleMenu() {
   menu.style.left = clamp(r.right - menu.offsetWidth, 8, Math.max(8, W - menu.offsetWidth - 8)) + 'px';
 }
 bMenu.onclick = toggleMenu;
+const bgMenu = document.getElementById('bgMenu'), bBg = document.getElementById('bBg');
+function updateBgMenu() { for (const b of bgMenu.children) b.classList.toggle('on', b.dataset.bg === bgMode); }
+function setBg(m) {
+  bgMode = m; updateBgMenu(); requestDraw();
+  try { localStorage.setItem('tableau-bg', m); } catch (_) {}
+}
+try { const m = localStorage.getItem('tableau-bg'); if (m) bgMode = m; } catch (_) {}
+bBg.onclick = () => {
+  if (bgMenu.classList.contains('show')) { bgMenu.classList.remove('show'); return; }
+  closePop(); closeMenu(); updateBgMenu();
+  bgMenu.classList.add('show');
+  const r = bBg.getBoundingClientRect();
+  bgMenu.style.top = (r.bottom + 6) + 'px';
+  bgMenu.style.left = clamp(r.right - bgMenu.offsetWidth, 8, Math.max(8, W - bgMenu.offsetWidth - 8)) + 'px';
+};
+for (const b of bgMenu.children) b.onclick = () => { setBg(b.dataset.bg); bgMenu.classList.remove('show'); };
 menu.addEventListener('click', closeMenu);
 
 function togglePop(which, anchor) {
@@ -1100,6 +1265,8 @@ function togglePop(which, anchor) {
 document.getElementById('bPen').onclick = () => { setTool('pen'); closePop(); };
 document.getElementById('bHl').onclick = () => { setTool('hl'); closePop(); };
 document.getElementById('bEra').onclick = () => { setTool('eraser'); closePop(); };
+document.getElementById('bShp').onclick = () => { setTool('shape'); closePop(); };
+document.getElementById('aShp').onclick = () => togglePop('shape', gShp);
 document.getElementById('bSel').onclick = () => { setTool('sel'); closePop(); };
 document.getElementById('aPen').onclick = () => togglePop('pen', gPen);
 document.getElementById('aHl').onclick = () => togglePop('hl', gHl);
@@ -1107,13 +1274,14 @@ document.getElementById('aEra').onclick = () => togglePop('eraser', gEra);
 document.getElementById('aSel').onclick = () => togglePop('sel', gSel);
 popRange.oninput = () => {
   const v = +popRange.value;
-  if (popFor === 'eraser') eraserPx = v; else if (popFor === 'hl') hlPx = v; else penPx = v;
+  if (popFor === 'eraser') eraserPx = v; else if (popFor === 'hl') hlPx = v; else if (popFor === 'shape') shapePx = v; else penPx = v;
   updatePop(); requestDraw();
 };
 // un appui n'importe où ailleurs ferme les fenêtres
 document.addEventListener('pointerdown', e => {
   if (popFor && !pop.contains(e.target) && !e.target.closest('.arrow')) closePop();
   if (menu.classList.contains('show') && !menu.contains(e.target) && !e.target.closest('#bMenu')) closeMenu();
+  if (bgMenu.classList.contains('show') && !bgMenu.contains(e.target) && !e.target.closest('#bBg')) bgMenu.classList.remove('show');
 }, true);
 
 /* ---------- numéro de page ---------- */
@@ -1265,7 +1433,8 @@ function fromB64(b) {
 async function save() {
   const data = {
     app: 'tableau-alpha', v: 3,
-    strokes: strokes.map(s => ({ c: s.color, w: s.w, h: s.hl ? 1 : 0, p: s.pts.map(p => [+p[0].toFixed(2), +p[1].toFixed(2)]) })),
+    strokes: strokes.map(s => ({ c: s.color, w: s.w, h: s.hl ? 1 : 0, s: s.sh ? 1 : 0, p: s.pts.map(p => [+p[0].toFixed(2), +p[1].toFixed(2)]) })),
+    bg: bgMode,
     images: images.map(m => ({ src: m.src, x: +m.x.toFixed(2), y: +m.y.toFixed(2), w: +m.w.toFixed(2), h: +m.h.toFixed(2) })),
     view: { s: view.s, tx: view.tx, ty: view.ty },
     pdf: pdfBytes ? toB64(pdfBytes) : null,
@@ -1297,7 +1466,8 @@ async function save() {
 async function applyProject(d) {
   if (!d || d.app !== 'tableau-alpha' || !Array.isArray(d.strokes)) throw new Error('fichier non reconnu');
   const k = d.v === 2 ? 1 / ((d.view && d.view.s) || 1) : 1;   // version 2 : épaisseur enregistrée en pixels d'écran
-  strokes = d.strokes.map(s => mk(s.c, s.w * k, s.p, s.h));
+  strokes = d.strokes.map(s => mk(s.c, s.w * k, s.p, s.h, s.s));
+  if (d.bg) setBg(d.bg);
   undoStack = []; redoStack = []; sel = null;
   images = [];
   for (const m of (d.images || [])) {
@@ -1375,9 +1545,10 @@ if ('launchQueue' in window) {
 
 /* ---------- clavier ---------- */
 addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closePop(); closeMenu(); if (sel && !selGesture) clearSel(); }
+  if (e.key === 'Escape') { closePop(); closeMenu(); bgMenu.classList.remove('show'); if (sel && !selGesture) clearSel(); }
   if (e.target && e.target.tagName === 'INPUT') return;   // on tape dans un champ
   if ((e.key === 'Delete' || e.key === 'Backspace') && sel) { deleteSelection(); e.preventDefault(); return; }
+  if (e.key === 'Shift') shiftDown = true;
   if (e.code === 'Space') { spaceDown = true; e.preventDefault(); return; }
   const k = e.key.toLowerCase();
   if (e.ctrlKey || e.metaKey) {
@@ -1385,14 +1556,16 @@ addEventListener('keydown', e => {
     else if (k === 'y') { redo(); e.preventDefault(); }
     else if (k === 's') { save(); e.preventDefault(); }
     else if (k === 'o') { openProject(); e.preventDefault(); }
+    else if (k === 'd') { if (sel) duplicateSelection(); e.preventDefault(); }
     return;
   }
   if (k === 'e') setTool('eraser');
   else if (k === 'p') setTool('pen');
   else if (k === 'h') setTool('hl');
   else if (k === 's') setTool('sel');
+  else if (k === 'f') setTool('shape');
 });
-addEventListener('keyup', e => { if (e.code === 'Space') spaceDown = false; });
+addEventListener('keyup', e => { if (e.code === 'Space') spaceDown = false; if (e.key === 'Shift') shiftDown = false; });
 
 addEventListener('resize', resize);
 resize();
