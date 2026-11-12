@@ -2,7 +2,16 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<script>
+// Téléphones et tablettes : interface adaptée (un doigt dessine, deux doigts déplacent). ?mobile=1 ou ?mobile=0 pour forcer.
+(function () {
+  const q = new URLSearchParams(location.search).get('mobile');
+  const ua = navigator.userAgent;
+  const auto = (navigator.userAgentData && navigator.userAgentData.mobile) || /Android|iPhone|iPad|iPod|Mobi/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  if (q === '1' || (q !== '0' && auto)) document.documentElement.classList.add('mobile');
+})();
+</script>
 <title>Tableau blanc — alpha</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#ffffff">
@@ -130,6 +139,28 @@
     padding:10px 18px;border-radius:10px;font-size:16px;opacity:0;transition:opacity .25s;
     z-index:6;pointer-events:none}
   #toast.show{opacity:.95}
+  /* ---------- téléphones et tablettes ---------- */
+  #tbar{display:none}
+  .mobile #bar{grid-template-columns:auto 1fr auto;padding:0 4px;gap:2px;height:calc(52px + env(safe-area-inset-top));padding-top:env(safe-area-inset-top)}
+  .mobile #bar .sep,.mobile #bFull,.mobile .pg button{display:none}
+  .mobile button.ic{width:40px}
+  .mobile .bc{gap:2px}
+  .mobile .pg{margin-right:0;gap:4px}
+  .mobile .pg input{width:44px}
+  .mobile #tbar{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;justify-content:center;align-items:center;gap:2px;
+    padding:6px 4px calc(6px + env(safe-area-inset-bottom));background:rgba(255,255,255,.96);border-top:1px solid var(--line);
+    box-shadow:0 -1px 10px rgba(0,0,0,.06);overflow-x:auto;scrollbar-width:none}
+  .mobile #tbar::-webkit-scrollbar{display:none}
+  .mobile #tbar .tool .main{width:42px;height:44px}
+  .mobile #tbar .tool .arrow{width:18px;height:44px}
+  .mobile #boards{bottom:calc(66px + env(safe-area-inset-bottom));left:8px;padding:2px}
+  .mobile #boards button{width:36px;height:36px}
+  .mobile #boards .num{min-width:46px;font-size:14px}
+  .mobile #st{display:none}
+  .mobile #toast{bottom:calc(130px + env(safe-area-inset-bottom))}
+  .mobile #find{left:8px;right:8px;top:calc(60px + env(safe-area-inset-top))}
+  .mobile #find input{flex:1;width:auto;min-width:0}
+  .mobile #find button{width:36px}
 </style>
 </head>
 <body>
@@ -196,6 +227,7 @@
 <input type="file" id="fPdf" accept="application/pdf,.pdf" hidden>
 <input type="file" id="fImg" accept="image/*" hidden>
 <input type="file" id="fJson" accept=".json,application/json" hidden>
+<div id="tbar"></div>
 <div id="boards"><button id="bdPrev" title="Tableau précédent" aria-label="Tableau précédent">‹</button><span class="num" id="bdNum"></span><button id="bdNext" title="Tableau suivant" aria-label="Tableau suivant">›</button><button id="bdAdd" title="Nouveau tableau" aria-label="Nouveau tableau">+</button></div>
 <div id="st"></div>
 <div id="toast"></div>
@@ -257,6 +289,8 @@ const ctx = cv.getContext('2d');
 const stEl = document.getElementById('st');
 const toastEl = document.getElementById('toast');
 
+const IS_MOBILE = document.documentElement.classList.contains('mobile');
+let mFirst = null;               // mobile : premier doigt (qui dessine) et l'heure où il s'est posé
 const GAP = 24;                // espace entre les pages du PDF
 
 let dpr = 1, W = 0, H = 0;
@@ -473,7 +507,8 @@ function updateTextLayer() {
 for (const t of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) {
   tl.addEventListener(t, e => {
     if (e.pointerType !== 'touch') return;
-    e.preventDefault(); e.stopPropagation();
+    if (!IS_MOBILE) e.preventDefault();
+    e.stopPropagation();
     cv.dispatchEvent(new PointerEvent(t, { pointerId: e.pointerId, pointerType: 'touch', clientX: e.clientX, clientY: e.clientY,
       isPrimary: e.isPrimary, button: e.button, buttons: e.buttons, bubbles: true, cancelable: true }));
   });
@@ -726,12 +761,13 @@ async function loadPdfBytes(bytes) {
   return true;
 }
 
+function fitScale() { return IS_MOBILE && pages.length ? Math.min(1, (W - 16) / pages[0].w) : 1; }
 function fitView() {
   cancelFling();
   if (pages.length) {
-    view.s = 1;
+    view.s = fitScale();
     view.tx = W / 2;
-    view.ty = 72;
+    view.ty = IS_MOBILE ? 60 : 72;
   } else {
     view.s = 1; view.tx = 0; view.ty = 0;
   }
@@ -1309,7 +1345,24 @@ cv.addEventListener('pointerdown', e => {
   if (e.pointerType === 'pen') lastPenT = performance.now();
   lastPointerType = e.pointerType; requestDraw();
 
-  if (e.pointerType === 'touch') {
+  if (e.pointerType === 'touch' && IS_MOBILE) {
+    // mobile : un doigt dessine (outil actif), deux doigts déplacent / zooment
+    const now = performance.now();
+    const busy = drawing || erasing || panning || selGesture;
+    if (!busy && touches.size === 0) {
+      touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      mFirst = { id: e.pointerId, t: now };
+      if (tool === 'text') { gest = null; startGest(); return; }   // texte : un doigt ne dessine pas
+      // on continue plus bas, comme un stylet
+    } else {
+      // deuxième doigt posé juste après le premier : c'était un geste à deux doigts, on annule le début de trait
+      if (busy && mFirst && touches.has(mFirst.id) && now - mFirst.t < 300) abortAction();
+      if (drawing || erasing || panning || selGesture) return;
+      touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      try { cv.setPointerCapture(e.pointerId); } catch (_) {}
+      gest = null; startGest(); return;
+    }
+  } else if (e.pointerType === 'touch') {
     if (drawing || erasing || panning || selGesture) return;   // paume pendant qu'on écrit : ignorée
     if (touches.size === 0 && performance.now() - lastPenT < 1000) return;   // paume près du stylet : ignorée
     touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -1349,11 +1402,11 @@ cv.addEventListener('pointerdown', e => {
 
 cv.addEventListener('pointermove', e => {
   if (e.pointerType === 'pen') lastPenT = performance.now();
-  if (e.pointerType === 'touch') {
+  if (e.pointerType === 'touch' && !(IS_MOBILE && ownsAction(e.pointerId))) {
     const t = touches.get(e.pointerId);
     if (!t) return;
     t.x = e.clientX; t.y = e.clientY;
-    if (touches.size >= 1 && !drawing && !erasing && !panning && !selGesture) applyGest();
+    if (touches.size >= (IS_MOBILE ? 2 : 1) && !drawing && !erasing && !panning && !selGesture) applyGest();
     return;
   }
   hover = { x: e.clientX, y: e.clientY };
@@ -1385,8 +1438,22 @@ cv.addEventListener('pointermove', e => {
   if (tool === 'eraser') requestDraw();
 });
 
+function ownsAction(id) {
+  return (drawing && drawing.id === id) || (erasing && erasing.id === id) || (selGesture && selGesture.id === id);
+}
+function abortAction() {
+  if (drawing) { const i = strokes.lastIndexOf(drawing.st); if (i >= 0) strokes.splice(i, 1); drawing = null; }
+  if (erasing) { revertOps(erasing.ops); erasing = null; }
+  if (selGesture) endSelect({ type: 'pointercancel', pointerId: selGesture.id });
+  hover = null; requestDraw();
+}
 function endPointer(e) {
-  if (e.pointerType === 'touch') {
+  if (e.pointerType === 'touch' && IS_MOBILE && ownsAction(e.pointerId)) {
+    touches.delete(e.pointerId);
+    if (mFirst && mFirst.id === e.pointerId) mFirst = null;
+    setTimeout(() => { if (!erasing) { hover = null; requestDraw(); } }, 0);
+    // on continue plus bas pour terminer le trait, la gomme ou la sélection
+  } else if (e.pointerType === 'touch') {
     touches.delete(e.pointerId);
     if (touches.size === 0 && e.type === 'pointerup') startFling();
     gest = null;
@@ -1534,7 +1601,7 @@ function openPop(which, anchor) {
   pop.classList.add('show');
   const r = anchor.getBoundingClientRect();
   pop.style.left = clamp(r.left, 8, Math.max(8, W - pop.offsetWidth - 8)) + 'px';
-  pop.style.top = (r.bottom + 6) + 'px';
+  pop.style.top = (anchor.closest('#tbar') ? Math.max(8, r.top - pop.offsetHeight - 6) : r.bottom + 6) + 'px';
 }
 function closePop() { popFor = null; pop.classList.remove('show'); }
 
@@ -1657,7 +1724,7 @@ document.getElementById('bFit').onclick = () => {   // zoom 100 %, centré sur l
   if (!pages.length) { cancelFling(); const wx = (W / 2 - view.tx) / view.s, wy = (H / 2 - view.ty) / view.s; view.s = 1; view.tx = W / 2 - wx; view.ty = H / 2 - wy; touchView(); return; }
   cancelFling();
   const wy = (H / 2 - view.ty) / view.s;
-  view.s = 1; view.tx = W / 2; view.ty = H / 2 - wy;
+  view.s = fitScale(); view.tx = W / 2; view.ty = H / 2 - wy * view.s;
   touchView();
 };
 document.getElementById('bar').addEventListener('click', () => {
@@ -1897,6 +1964,11 @@ addEventListener('keydown', e => {
 });
 addEventListener('keyup', e => { if (e.code === 'Space') spaceDown = false; if (e.key === 'Shift') shiftDown = false; });
 
+if (IS_MOBILE) {
+  const tb = document.getElementById('tbar');
+  for (const id of ['gPen', 'gHl', 'gShp', 'gEra', 'gSel', 'gTxt']) tb.appendChild(document.getElementById(id));
+  tb.addEventListener('click', e => { const b = e.target.closest('button'); if (b) b.blur(); });
+}
 addEventListener('resize', resize);
 resize();
 updateBoardBar();
