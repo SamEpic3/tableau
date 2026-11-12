@@ -1,6 +1,6 @@
 // Service worker : met l'application en cache pour qu'elle fonctionne hors ligne.
 // Changer VERSION à chaque mise à jour de index.html pour forcer le rafraîchissement du cache.
-const VERSION = 'v3';
+const VERSION = 'v4';
 const CACHE = 'tableau-' + VERSION;
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 

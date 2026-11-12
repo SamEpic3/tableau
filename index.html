@@ -118,7 +118,13 @@
   #pop input[type=range]{width:100%;height:36px;margin:0;accent-color:#2450c8}
   #pop .prev{height:72px;display:flex;align-items:center;justify-content:center}
   #pop .dot{display:block;border-radius:50%;flex:none;box-sizing:border-box}
-  #st{position:fixed;left:10px;bottom:8px;font-size:13px;color:#555;background:#fffc;
+  #boards{position:fixed;left:10px;bottom:10px;z-index:5;display:flex;align-items:center;gap:2px;padding:4px;
+    background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.1)}
+  #boards button{width:40px;height:40px;padding:0;font-size:22px;line-height:1}
+  #boards .num{min-width:58px;text-align:center;font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+  #boards .num b{font-weight:600}
+  #boards .num span{color:#777}
+  #st{position:fixed;right:10px;bottom:8px;font-size:13px;color:#555;background:#fffc;
     padding:3px 8px;border-radius:6px;z-index:4;pointer-events:none}
   #toast{position:fixed;left:50%;bottom:40px;transform:translateX(-50%);background:#222;color:#fff;
     padding:10px 18px;border-radius:10px;font-size:16px;opacity:0;transition:opacity .25s;
@@ -167,6 +173,7 @@
   <button id="bImg"><span>Importer une image…</span></button>
   <div class="msep"></div>
   <button id="bNew"><span>Nouveau</span></button>
+  <button id="bDelBoard"><span>Supprimer ce tableau</span></button>
   <button id="bOpen"><span>Ouvrir…</span><span class="kbd">Ctrl+O</span></button>
   <button id="bSave"><span>Enregistrer</span><span class="kbd">Ctrl+S</span></button>
 </div>
@@ -189,6 +196,7 @@
 <input type="file" id="fPdf" accept="application/pdf,.pdf" hidden>
 <input type="file" id="fImg" accept="image/*" hidden>
 <input type="file" id="fJson" accept=".json,application/json" hidden>
+<div id="boards"><button id="bdPrev" title="Tableau précédent" aria-label="Tableau précédent">‹</button><span class="num" id="bdNum"></span><button id="bdNext" title="Tableau suivant" aria-label="Tableau suivant">›</button><button id="bdAdd" title="Nouveau tableau" aria-label="Nouveau tableau">+</button></div>
 <div id="st"></div>
 <div id="toast"></div>
 
@@ -729,6 +737,66 @@ function fitView() {
   }
   touchView();
 }
+
+/* ---------- plusieurs tableaux dans la session ---------- */
+// Chaque tableau a ses traits, ses images, son PDF, sa vue, son fond et son historique d'annulation.
+let boards = [null], boardIdx = 0;   // boards[boardIdx] n'est à jour qu'après snapBoard()
+function blankBoard(bg) {
+  return { strokes: [], images: [], undoStack: [], redoStack: [], pages: [], pdfBytes: null, pdfDoc: null, pdfName: '', view: null, bg: bg || 'plain' };
+}
+function snapBoard() {
+  return { strokes, images, undoStack, redoStack, pages, pdfBytes, pdfDoc, pdfName, view: { s: view.s, tx: view.tx, ty: view.ty }, bg: bgMode };
+}
+function loadBoard(b) {
+  strokes = b.strokes; images = b.images; undoStack = b.undoStack; redoStack = b.redoStack;
+  pages = b.pages; pdfBytes = b.pdfBytes; pdfDoc = b.pdfDoc; pdfName = b.pdfName;
+  bgMode = b.bg || 'plain'; updateBgMenu();
+  if (b.view) { Object.assign(view, b.view); touchView(); } else fitView();
+}
+function leaveBoard() {
+  clearSel(); cancelFling();
+  drawing = null; erasing = null; selGesture = null;
+  const ws = window.getSelection(); if (ws) ws.removeAllRanges();
+  findHits = []; findCur = -1; findCnt.textContent = '';
+  boards[boardIdx] = snapBoard();
+}
+function afterBoardChange() {
+  updateBoardBar(); updatePageBox(); requestDraw();
+  if (findEl.classList.contains('show') && findIn.value) runFind();
+}
+function gotoBoard(i) {
+  if (i === boardIdx || i < 0 || i >= boards.length) return;
+  leaveBoard();
+  boardIdx = i; loadBoard(boards[i]);
+  afterBoardChange();
+  flash('Tableau ' + (i + 1) + ' / ' + boards.length);
+}
+function addBoard() {
+  leaveBoard();
+  boards.splice(boardIdx + 1, 0, blankBoard(bgMode));   // le nouveau tableau garde le fond actuel
+  boardIdx++; loadBoard(boards[boardIdx]);
+  afterBoardChange();
+  flash('Nouveau tableau ' + (boardIdx + 1) + ' / ' + boards.length);
+}
+function deleteBoard() {
+  if (boards.length < 2) { flash('C’est le seul tableau'); return; }
+  if (!confirm('Supprimer le tableau ' + (boardIdx + 1) + ' et tout son contenu ?')) return;
+  leaveBoard();
+  boards.splice(boardIdx, 1);
+  boardIdx = Math.min(boardIdx, boards.length - 1);
+  loadBoard(boards[boardIdx]);
+  afterBoardChange();
+}
+function updateBoardBar() {
+  document.getElementById('bdNum').innerHTML = '<b>' + (boardIdx + 1) + '</b> <span>/ ' + boards.length + '</span>';
+  document.getElementById('bdPrev').disabled = boardIdx === 0;
+  document.getElementById('bdNext').disabled = boardIdx === boards.length - 1;
+  document.getElementById('bDelBoard').disabled = boards.length < 2;
+}
+document.getElementById('bdPrev').onclick = () => gotoBoard(boardIdx - 1);
+document.getElementById('bdNext').onclick = () => gotoBoard(boardIdx + 1);
+document.getElementById('bdAdd').onclick = addBoard;
+for (const id of ['bdPrev', 'bdNext', 'bdAdd']) document.getElementById(id).addEventListener('pointerdown', e => e.stopPropagation());
 
 /* ---------- zoom / déplacement ---------- */
 function zoomAt(cx, cy, k) {
@@ -1598,11 +1666,13 @@ document.getElementById('bar').addEventListener('click', () => {
 });
 
 document.getElementById('bNew').onclick = () => {
-  if (!confirm('Tout effacer et recommencer à zéro ?')) return;
-  strokes = []; images = []; undoStack = []; redoStack = []; sel = null;
-  pages = []; pdfBytes = null; pdfDoc = null; pdfName = ''; fileHandle = null;
-  fitView();
+  if (!confirm(boards.length > 1 ? 'Tout effacer (les ' + boards.length + ' tableaux) et recommencer à zéro ?' : 'Tout effacer et recommencer à zéro ?')) return;
+  leaveBoard();
+  boards = [blankBoard(bgMode)]; boardIdx = 0; fileHandle = null;
+  loadBoard(boards[0]);
+  afterBoardChange();
 };
+document.getElementById('bDelBoard').onclick = () => { closeMenu(); deleteBoard(); };
 
 /* ---------- import PDF ---------- */
 const fPdf = document.getElementById('fPdf');
@@ -1674,16 +1744,22 @@ function fromB64(b) {
 }
 
 async function save() {
-  const data = {
-    app: 'tableau-alpha', v: 3,
-    strokes: strokes.map(s => ({ c: s.color, w: s.w, h: s.hl ? 1 : 0, s: s.sh ? 1 : 0, b: s.cap === 'butt' ? 1 : 0, p: s.pts.map(p => [+p[0].toFixed(2), +p[1].toFixed(2)]) })),
-    bg: bgMode,
-    images: images.map(m => ({ src: m.src, x: +m.x.toFixed(2), y: +m.y.toFixed(2), w: +m.w.toFixed(2), h: +m.h.toFixed(2) })),
-    view: { s: view.s, tx: view.tx, ty: view.ty },
-    pdf: pdfBytes ? toB64(pdfBytes) : null,
-    pdfName
-  };
+  boards[boardIdx] = snapBoard();
+  const data = { app: 'tableau-alpha', v: 4, cur: boardIdx, boards: boards.map(boardData) };
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+  return saveBlob(blob);
+}
+function boardData(b) {
+  return {
+    strokes: b.strokes.map(s => ({ c: s.color, w: s.w, h: s.hl ? 1 : 0, s: s.sh ? 1 : 0, b: s.cap === 'butt' ? 1 : 0, p: s.pts.map(p => [+p[0].toFixed(2), +p[1].toFixed(2)]) })),
+    bg: b.bg,
+    images: b.images.map(m => ({ src: m.src, x: +m.x.toFixed(2), y: +m.y.toFixed(2), w: +m.w.toFixed(2), h: +m.h.toFixed(2) })),
+    view: b.view,
+    pdf: b.pdfBytes ? toB64(b.pdfBytes) : null,
+    pdfName: b.pdfName
+  };
+}
+async function saveBlob(blob) {
   if (window.showSaveFilePicker) {
     try {
       if (!fileHandle) {
@@ -1707,19 +1783,27 @@ async function save() {
 }
 
 async function applyProject(d) {
-  if (!d || d.app !== 'tableau-alpha' || !Array.isArray(d.strokes)) throw new Error('fichier non reconnu');
-  const k = d.v === 2 ? 1 / ((d.view && d.view.s) || 1) : 1;   // version 2 : épaisseur enregistrée en pixels d'écran
-  strokes = d.strokes.map(s => { const st = mk(s.c, s.w * k, s.p, s.h, s.s); if (s.b) st.cap = 'butt'; return st; });
-  if (d.bg) setBg(d.bg);
-  undoStack = []; redoStack = []; sel = null;
-  images = [];
-  for (const m of (d.images || [])) {
-    try { images.push({ el: await loadImgEl(m.src), src: m.src, x: m.x, y: m.y, w: m.w, h: m.h }); } catch (_) {}
+  if (!d || d.app !== 'tableau-alpha') throw new Error('fichier non reconnu');
+  const list = Array.isArray(d.boards) ? d.boards : [d];          // versions 1 à 3 : un seul tableau
+  if (!list.length || !list.every(x => x && Array.isArray(x.strokes))) throw new Error('fichier non reconnu');
+  leaveBoard();
+  const out = [];
+  for (const bd of list) {
+    const k = d.v === 2 ? 1 / ((bd.view && bd.view.s) || 1) : 1;   // version 2 : épaisseur enregistrée en pixels d'écran
+    loadBoard(blankBoard(bd.bg || 'plain'));
+    strokes = bd.strokes.map(s => { const st = mk(s.c, s.w * k, s.p, s.h, s.s); if (s.b) st.cap = 'butt'; return st; });
+    for (const m of (bd.images || [])) {
+      try { images.push({ el: await loadImgEl(m.src), src: m.src, x: m.x, y: m.y, w: m.w, h: m.h }); } catch (_) {}
+    }
+    pdfName = bd.pdfName || '';
+    if (bd.pdf) await loadPdfBytes(fromB64(bd.pdf));
+    if (bd.view) Object.assign(view, bd.view);
+    out.push(snapBoard());
   }
-  pages = []; pdfBytes = null; pdfDoc = null; pdfName = d.pdfName || '';
-  if (d.pdf) await loadPdfBytes(fromB64(d.pdf));
-  else fitView();
-  if (d.view) { Object.assign(view, d.view); touchView(); }
+  boards = out; boardIdx = clamp(d.cur | 0, 0, out.length - 1);
+  sel = null;
+  loadBoard(boards[boardIdx]);
+  afterBoardChange();
 }
 
 async function openProject() {
@@ -1815,6 +1899,7 @@ addEventListener('keyup', e => { if (e.code === 'Space') spaceDown = false; if (
 
 addEventListener('resize', resize);
 resize();
+updateBoardBar();
 })();
 </script>
 <script>
