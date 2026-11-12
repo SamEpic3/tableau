@@ -52,6 +52,25 @@
     stroke-linejoin:round;display:block;pointer-events:none}
   .tool .main,button.ic{display:flex;align-items:center;justify-content:center}
   button.ic{width:44px;padding:0}
+  #tl{position:fixed;inset:0;z-index:1;overflow:hidden;display:none;touch-action:none}
+  #tl .tp{position:absolute;left:0;top:0;transform-origin:0 0}
+  .textLayer{position:absolute;text-align:initial;inset:0;overflow:hidden;line-height:1;
+    -webkit-text-size-adjust:none;text-size-adjust:none;forced-color-adjust:none;transform-origin:0 0;
+    -webkit-user-select:text;user-select:text;touch-action:none}
+  .textLayer :is(span,br){color:transparent;position:absolute;white-space:pre;cursor:text;transform-origin:0% 0%}
+  .textLayer span.markedContent{top:0;height:0}
+  .textLayer ::selection{background:rgba(36,80,200,.28)}
+  .textLayer br::selection{background:transparent}
+  .textLayer .endOfContent{display:block;position:absolute;inset:100% 0 0;z-index:-1;cursor:default;user-select:none}
+  .textLayer .endOfContent.active{top:0}
+  #find{position:fixed;top:60px;right:12px;z-index:6;display:none;align-items:center;gap:4px;padding:6px;
+    background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.18)}
+  #find.show{display:flex}
+  #find input{width:220px;height:36px;box-sizing:border-box;padding:0 10px;font:inherit;font-size:15px;color:var(--ink);
+    border:1px solid var(--line);border-radius:8px;outline:none}
+  #find input:focus{border-color:#9db8ff;outline:2px solid #9db8ff}
+  #find .cnt{min-width:64px;text-align:center;font-size:13px;color:#777;font-variant-numeric:tabular-nums}
+  #find button{width:40px;padding:0;font-size:20px}
   #bgMenu{position:fixed;z-index:7;min-width:200px;padding:6px;background:#fff;border:1px solid var(--line);
     border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.18);display:none}
   #bgMenu.show{display:block}
@@ -65,12 +84,13 @@
   #menu .kbd{font-size:12px;color:#888}
   #menu .msep{height:1px;background:var(--line);margin:4px 6px}
   #selBar{position:fixed;z-index:6;display:none;gap:8px}
-  #selBar .sb{display:flex;align-items:center;gap:6px;height:44px;padding:0 14px;border-radius:22px;
+  #selBar .sb,#txtBar .sb{display:flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border-radius:22px;
     border:1px solid var(--line);background:#fff;color:var(--ink);font:inherit;font-size:15px;box-shadow:0 2px 10px rgba(0,0,0,.18);cursor:pointer}
-  #selBar .sb:active{background:var(--hover)}
+  #selBar .sb:active,#txtBar .sb:active{background:var(--hover)}
   #selDel{border-color:#e0b4b4 !important;color:#c92a2a !important}
   #selDel:active{background:#fff0f0 !important}
-  #selBar svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  #txtBar{position:fixed;z-index:6;display:none;gap:8px}
+  #selBar svg,#txtBar svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
   #drop{position:fixed;inset:0;z-index:8;display:none;align-items:center;justify-content:center;
     box-sizing:border-box;background:rgba(36,80,200,.10);border:3px dashed var(--onink);
     color:var(--onink);font-size:24px;pointer-events:none}
@@ -108,6 +128,7 @@
 </head>
 <body>
 <canvas id="cv"></canvas>
+<div id="tl"></div>
 
 <div id="bar">
   <div class="bl">
@@ -116,6 +137,7 @@
     <div class="tool" id="gShp"><button class="main" id="bShp" title="Formes : ligne (F)" aria-label="Formes"><span id="shpIcon" style="display:contents"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5"/></svg></span></button><button class="arrow" id="aShp" title="Forme, couleur et épaisseur">▾</button></div>
     <div class="tool" id="gEra"><button class="main" id="bEra" title="Gomme (E)" aria-label="Gomme"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg></button><button class="arrow" id="aEra" title="Diamètre de la gomme">▾</button></div>
     <div class="tool" id="gSel"><button class="main" id="bSel" title="Sélection (S)" aria-label="Sélection"><span id="selIcon" style="display:contents"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3a2 2 0 0 0-2 2"/><path d="M19 3a2 2 0 0 1 2 2"/><path d="M21 19a2 2 0 0 1-2 2"/><path d="M5 21a2 2 0 0 1-2-2"/><path d="M9 3h1"/><path d="M9 21h1"/><path d="M14 3h1"/><path d="M14 21h1"/><path d="M3 9v1"/><path d="M21 9v1"/><path d="M3 14v1"/><path d="M21 14v1"/></svg></span></button><button class="arrow" id="aSel" title="Mode de sélection">▾</button></div>
+    <div class="tool" id="gTxt"><button class="main" id="bTxt" title="Texte du PDF : sélectionner, surligner, copier (T)" aria-label="Texte du PDF"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 22h-1a4 4 0 0 1-4-4V6a4 4 0 0 1 4-4h1"/><path d="M7 22h1a4 4 0 0 0 4-4v-1"/><path d="M7 2h1a4 4 0 0 1 4 4v1"/></svg></button></div>
     <span class="sep"></span>
     <button id="bUndo" class="ic" title="Annuler (Ctrl+Z)" aria-label="Annuler"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></svg></button>
     <button id="bRedo" class="ic" title="Rétablir (Ctrl+Y)" aria-label="Rétablir"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13"/></svg></button>
@@ -126,6 +148,7 @@
     <button id="bFull" class="ic" title="Plein écran" aria-label="Plein écran"><svg class="i" id="fullIcon" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 15 6 6"/><path d="m15 9 6-6"/><path d="M21 16v5h-5"/><path d="M21 8V3h-5"/><path d="M3 16v5h5"/><path d="m3 21 6-6"/><path d="M3 8V3h5"/><path d="M9 9 3 3"/></svg></button>
   </div>
   <div class="br">
+    <button id="bFind" class="ic" title="Rechercher dans le PDF (Ctrl+F)" aria-label="Rechercher"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
     <button id="bBg" class="ic" title="Fond de page" aria-label="Fond de page"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg></button>
     <button id="bMenu" class="ic" title="Fichier" aria-label="Menu fichier"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg></button>
   </div>
@@ -148,7 +171,9 @@
   <button id="bSave"><span>Enregistrer</span><span class="kbd">Ctrl+S</span></button>
 </div>
 
-<div id="selBar"><button class="sb" id="selDup" title="Dupliquer (Ctrl+D)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Dupliquer</button><button class="sb" id="selDel" title="Effacer la sélection (Suppr)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>Effacer</button></div>
+<div id="txtBar"><button class="sb" id="txtHl" title="Surligner le texte sélectionné" aria-label="Surligner"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg></button><button class="sb" id="txtCopy" title="Copier le texte" aria-label="Copier"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button></div>
+<div id="find"><input id="findIn" type="text" placeholder="Rechercher dans le PDF" autocomplete="off" aria-label="Rechercher dans le PDF"><span class="cnt" id="findCnt"></span><button id="findPrev" title="Précédent (Maj+Entrée)">‹</button><button id="findNext" title="Suivant (Entrée)">›</button><button id="findClose" title="Fermer (Échap)">✕</button></div>
+<div id="selBar"><button class="sb" id="selDup" title="Dupliquer (Ctrl+D)" aria-label="Dupliquer"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button><button class="sb" id="selDel" aria-label="Effacer" title="Effacer la sélection (Suppr)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button></div>
 <div id="drop">Déposez un PDF, une image ou un projet (.json)</div>
 
 <div id="pop">
@@ -298,7 +323,7 @@ function drawStroke(c, st) {
   c.save();
   if (st.hl) { c.globalCompositeOperation = 'multiply'; c.globalAlpha = 0.6; }
   c.strokeStyle = st.color; c.fillStyle = st.color;
-  c.lineWidth = st.w; c.lineCap = 'round'; c.lineJoin = 'round';
+  c.lineWidth = st.w; c.lineCap = st.cap || 'round'; c.lineJoin = 'round';
   if (p.length === 1) {
     c.beginPath(); c.arc(p[0][0], p[0][1], st.w / 2, 0, Math.PI * 2); c.fill();
   } else if (st.sh) {
@@ -351,7 +376,9 @@ function draw() {
     ctx.lineWidth = 1.5; ctx.strokeStyle = '#e03131'; ctx.stroke();
   }
 
+  drawFindHits();
   drawSelectionOverlay();
+  updateTextLayer();
 
   const txt = 'Pointeur : ' + lastPointerType + ' · zoom ' + Math.round(view.s * 100) + ' %';
   if (stEl.textContent !== txt) stEl.textContent = txt;
@@ -402,6 +429,218 @@ function drawBackground() {
   }
   ctx.restore();
 }
+
+/* ---------- texte du PDF : couche sélectionnable ---------- */
+const tl = document.getElementById('tl');
+let tlFor = null;                     // tableau de pages pour lequel la couche a été construite
+const tlDivs = new Map();             // page -> div
+function getTextContent(p) {
+  if (!p.tc) p.tc = p.pg.getTextContent();
+  return p.tc;
+}
+function updateTextLayer() {
+  if (tlFor !== pages) { tl.innerHTML = ''; tlDivs.clear(); tlFor = pages; }
+  const on = tool === 'text' && pages.length > 0;
+  tl.style.display = on ? 'block' : 'none';
+  if (!on) return;
+  for (const p of pages) {
+    let d = tlDivs.get(p);
+    if (!isVisible(p)) { if (d) d.style.display = 'none'; continue; }
+    if (!d) {
+      d = document.createElement('div'); d.className = 'tp';
+      d.style.width = p.w + 'px'; d.style.height = p.h + 'px';
+      const inner = document.createElement('div'); inner.className = 'textLayer';
+      inner.style.setProperty('--scale-factor', '1');
+      d.appendChild(inner); tl.appendChild(d); tlDivs.set(p, d);
+      getTextContent(p).then(tc => {
+        try { pdfjsLib.renderTextLayer({ textContentSource: tc, container: inner, viewport: p.vp, textDivs: [] }); } catch (_) {}
+      });
+    }
+    d.style.display = '';
+    d.style.transform = 'matrix(' + view.s + ',0,0,' + view.s + ',' + (p.x * view.s + view.tx) + ',' + (p.y * view.s + view.ty) + ')';
+  }
+  placeTxtBar();
+}
+// les doigts gardent leurs gestes (déplacer, zoomer) même par-dessus le texte
+for (const t of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) {
+  tl.addEventListener(t, e => {
+    if (e.pointerType !== 'touch') return;
+    e.preventDefault(); e.stopPropagation();
+    cv.dispatchEvent(new PointerEvent(t, { pointerId: e.pointerId, pointerType: 'touch', clientX: e.clientX, clientY: e.clientY,
+      isPrimary: e.isPrimary, button: e.button, buttons: e.buttons, bubbles: true, cancelable: true }));
+  });
+}
+tl.addEventListener('wheel', e => {
+  e.preventDefault();
+  cv.dispatchEvent(new WheelEvent('wheel', { deltaX: e.deltaX, deltaY: e.deltaY, deltaMode: e.deltaMode, ctrlKey: e.ctrlKey,
+    clientX: e.clientX, clientY: e.clientY, bubbles: true, cancelable: true }));
+}, { passive: false });
+tl.addEventListener('contextmenu', e => e.preventDefault());
+
+// barre « Surligner / Copier » sous le texte sélectionné
+const txtBar = document.getElementById('txtBar');
+txtBar.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); });   // garde la sélection
+function textSelection() {
+  const s = window.getSelection();
+  if (!s || s.isCollapsed || !s.rangeCount || tool !== 'text') return null;
+  const r = s.getRangeAt(0);
+  if (!tl.contains(r.commonAncestorContainer)) return null;
+  return { s, r };
+}
+function selectionRects(r) {
+  // rectangles de la sélection, regroupés par ligne
+  const raw = [...r.getClientRects()].filter(q => q.width > 0.5 && q.height > 0.5);
+  raw.sort((a, b) => (a.top + a.bottom) / 2 - (b.top + b.bottom) / 2 || a.left - b.left);
+  const lines = [];
+  for (const q of raw) {
+    const L = lines.find(l => Math.abs((l.top + l.bottom) / 2 - (q.top + q.bottom) / 2) < Math.min(l.bottom - l.top, q.height) * 0.5
+                                && q.left <= l.right + q.height * 0.8 && q.right >= l.left - q.height * 0.8);
+    if (L) { L.left = Math.min(L.left, q.left); L.right = Math.max(L.right, q.right); L.top = Math.min(L.top, q.top); L.bottom = Math.max(L.bottom, q.bottom); }
+    else lines.push({ left: q.left, right: q.right, top: q.top, bottom: q.bottom });
+  }
+  return lines;
+}
+function placeTxtBar() {
+  const t = textSelection();
+  if (!t) { txtBar.style.display = 'none'; return; }
+  const rs = selectionRects(t.r);
+  if (!rs.length) { txtBar.style.display = 'none'; return; }
+  const last = rs[rs.length - 1], first = rs[0];
+  txtBar.style.display = 'flex';
+  const w = txtBar.offsetWidth || 96, h = 44;
+  let x = clamp(last.right - w, 8, innerWidth - w - 8), y = last.bottom + 12;
+  if (y + h > innerHeight - 8) y = Math.max(60, first.top - 12 - h);
+  txtBar.style.left = x + 'px'; txtBar.style.top = y + 'px';
+}
+document.addEventListener('selectionchange', () => placeTxtBar());
+document.getElementById('txtHl').onclick = () => {
+  const t = textSelection(); if (!t) return;
+  const acts = [];
+  for (const q of selectionRects(t.r)) {
+    const a = toWorld(q.left, q.top), b = toWorld(q.right, q.bottom);
+    const hgt = b.y - a.y, cy = (a.y + b.y) / 2;
+    // trait de surligneur à bouts carrés, de la hauteur de la ligne
+    const st = mk(hlColor, hgt, [[a.x, cy], [b.x, cy]], true, true);
+    st.cap = 'butt';
+    strokes.push(st); acts.push({ t: 'add', st });
+  }
+  if (acts.length) { undoStack.push(acts.length === 1 ? acts[0] : { t: 'group', acts }); redoStack = []; }
+  t.s.removeAllRanges(); txtBar.style.display = 'none'; requestDraw();
+};
+document.getElementById('txtCopy').onclick = async () => {
+  const t = textSelection(); if (!t) return;
+  const txt = t.s.toString();
+  try { await navigator.clipboard.writeText(txt); }
+  catch (_) { try { document.execCommand('copy'); } catch (__) {} }
+  flash('Texte copié');
+};
+
+/* ---------- recherche dans le PDF ---------- */
+const findEl = document.getElementById('find'), findIn = document.getElementById('findIn'), findCnt = document.getElementById('findCnt');
+let findIdx = null;          // { pages, per: [{ p, norm, map, items }] }
+let findHits = [], findCur = -1, findTimer = null, findGen = 0;
+const normCh = c => c.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+async function buildFindIndex() {
+  if (findIdx && findIdx.pages === pages) return findIdx;
+  const per = [];
+  for (const p of pages) {
+    const tc = await getTextContent(p);
+    const items = tc.items.filter(it => typeof it.str === 'string');
+    let norm = ''; const map = [];
+    items.forEach((it, ii) => {
+      for (let k = 0; k < it.str.length; k++) {
+        const n = normCh(it.str[k]).replace(/\s/g, ' ');
+        for (const ch of n) { norm += ch; map.push([ii, k]); }
+      }
+      if (it.hasEOL || (it.str && !/\s$/.test(it.str))) { norm += ' '; map.push([ii, it.str.length]); }
+    });
+    per.push({ p, norm, map, items });
+  }
+  findIdx = { pages, per };
+  return findIdx;
+}
+// rectangle (en coordonnées de la page) des caractères [k0, k1) d'un élément de texte
+function itemRect(p, it, k0, k1) {
+  const tx = pdfjsLib.Util.transform(p.vp.transform, it.transform);
+  const fh = Math.hypot(tx[2], tx[3]) || 10;
+  const w = it.width * p.vp.scale, n = Math.max(1, it.str.length);
+  const x = tx[4] + w * k0 / n, x2 = tx[4] + w * Math.min(k1, n) / n;
+  return { x: p.x + x, y: p.y + tx[5] - fh, w: Math.max(1, x2 - x), h: fh * 1.15 };
+}
+async function runFind() {
+  const gen = ++findGen;
+  const q = normCh(findIn.value).replace(/\s+/g, ' ').trim();
+  findHits = []; findCur = -1;
+  if (!q || !pages.length) { findCnt.textContent = pages.length ? '' : 'Aucun PDF'; requestDraw(); return; }
+  findCnt.textContent = '…';
+  const idx = await buildFindIndex();
+  if (gen !== findGen) return;
+  for (const e of idx.per) {
+    let from = 0, at;
+    while ((at = e.norm.indexOf(q, from)) >= 0) {
+      const rects = [];
+      let cur = null;
+      for (let c = at; c < at + q.length; c++) {
+        const [ii, k] = e.map[c];
+        if (cur && cur.ii === ii) cur.k1 = k + 1;
+        else { if (cur) rects.push(cur); cur = { ii, k0: k, k1: k + 1 }; }
+      }
+      if (cur) rects.push(cur);
+      findHits.push({ p: e.p, rects: rects.map(r => itemRect(e.p, e.items[r.ii], r.k0, r.k1)) });
+      from = at + Math.max(1, q.length);
+    }
+  }
+  if (findHits.length) {
+    // premier résultat à partir de la page affichée
+    const cp = currentPage();
+    findCur = Math.max(0, findHits.findIndex(h => h.p.n >= cp));
+    showFindHit();
+  } else { findCnt.textContent = '0 résultat'; requestDraw(); }
+}
+function showFindHit() {
+  if (findCur < 0 || !findHits.length) return;
+  findCnt.textContent = (findCur + 1) + ' / ' + findHits.length;
+  const r = findHits[findCur].rects[0];
+  view.tx = W / 2 - (r.x + r.w / 2) * view.s;
+  view.ty = H / 2 - (r.y + r.h / 2) * view.s;
+  touchView();
+}
+function stepFind(d) {
+  if (!findHits.length) return;
+  findCur = (findCur + d + findHits.length) % findHits.length;
+  showFindHit();
+}
+function drawFindHits() {
+  if (!findHits.length || !findEl.classList.contains('show')) return;
+  ctx.save();
+  findHits.forEach((h, i) => {
+    if (!isVisible(h.p)) return;
+    ctx.fillStyle = i === findCur ? 'rgba(255,140,0,.45)' : 'rgba(255,212,59,.45)';
+    for (const r of h.rects) ctx.fillRect(r.x, r.y, r.w, r.h);
+  });
+  ctx.restore();
+}
+function openFind() {
+  if (!pages.length) { flash('Importez d’abord un PDF'); return; }
+  findEl.classList.add('show'); findIn.focus(); findIn.select();
+  if (findIn.value) runFind();
+}
+function closeFind() { findEl.classList.remove('show'); findIn.blur(); requestDraw(); }
+findIn.addEventListener('input', () => { clearTimeout(findTimer); findTimer = setTimeout(() => { findTimer = null; runFind(); }, 200); });
+findIn.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (findTimer) { clearTimeout(findTimer); findTimer = null; runFind(); }
+    else if (!findHits.length) runFind();
+    else stepFind(e.shiftKey ? -1 : 1);
+  }
+  else if (e.key === 'Escape') { e.preventDefault(); closeFind(); }
+  e.stopPropagation();
+});
+document.getElementById('findNext').onclick = () => stepFind(1);
+document.getElementById('findPrev').onclick = () => stepFind(-1);
+document.getElementById('findClose').onclick = closeFind;
+document.getElementById('bFind').onclick = () => findEl.classList.contains('show') ? closeFind() : openFind();
 
 /* ---------- formes (ligne, flèche, rectangle, ellipse) ---------- */
 function shapePoints(kind, a, b, constrain, w) {
@@ -471,7 +710,7 @@ async function loadPdfBytes(bytes) {
   for (let n = 1; n <= doc.numPages; n++) {
     const pg = await doc.getPage(n);
     const vp = pg.getViewport({ scale: 1 });
-    newPages.push({ n, pg, x: -vp.width / 2, y, w: vp.width, h: vp.height, canvas: null, rs: 0, busy: false });
+    newPages.push({ n, pg, vp, x: -vp.width / 2, y, w: vp.width, h: vp.height, canvas: null, rs: 0, busy: false, tc: null });
     y += vp.height + GAP;
   }
   pdfDoc = doc; pdfBytes = bytes; pages = newPages;
@@ -617,7 +856,7 @@ function eraseAt(sx, sy) {
     if (w.x < b[0] - m || w.x > b[2] + m || w.y < b[1] - m || w.y > b[3] + m) continue;
     const pieces = splitByCircle(st.pts, w.x, w.y, m);
     if (!pieces) continue;
-    const after = pieces.map(pts => mk(st.color, st.w, pts, st.hl, st.sh));
+    const after = pieces.map(pts => mk(st.color, st.w, pts, st.hl, st.sh)).map(x => { if (st.cap) x.cap = st.cap; return x; });
     erasing.ops.push({ i, before: st, after });
     strokes.splice(i, 1, ...after);
   }
@@ -718,7 +957,7 @@ function selectByPolygon(poly) {
     if (b[2] + m < pbb[0] || b[0] - m > pbb[2] || b[3] + m < pbb[1] || b[1] - m > pbb[3]) continue;
     const pcs = splitByPolygon(st.pts, poly, pbb);
     if (pcs.length <= 1) { if (pcs.length === 1 && pcs[0].inside) picked.push(st); continue; }
-    const after = pcs.map(c => mk(st.color, st.w, c.pts, st.hl, st.sh));
+    const after = pcs.map(c => mk(st.color, st.w, c.pts, st.hl, st.sh)).map(x => { if (st.cap) x.cap = st.cap; return x; });
     ops.push({ i, before: st, after });
     strokes.splice(i, 1, ...after);
     pcs.forEach((c, k) => { if (c.inside) picked.push(after[k]); });
@@ -902,7 +1141,7 @@ document.getElementById('selDup').onclick = () => duplicateSelection();
 function duplicateSelection() {
   if (!sel) return;
   const off = 24 / view.s;   // décalage de 24 px à l'écran
-  const ns = sel.strokes.map(st => mk(st.color, st.w, st.pts.map(q => [q[0] + off, q[1] + off]), st.hl, st.sh));
+  const ns = sel.strokes.map(st => { const x = mk(st.color, st.w, st.pts.map(q => [q[0] + off, q[1] + off]), st.hl, st.sh); if (st.cap) x.cap = st.cap; return x; });
   const ni = (sel.images || []).map(im => ({ el: im.el, src: im.src, x: im.x + off, y: im.y + off, w: im.w, h: im.h }));
   strokes.push(...ns); images.push(...ni);
   const dup = { t: 'dup', strokes: ns, images: ni };
@@ -1116,7 +1355,7 @@ cv.addEventListener('wheel', e => {
 /* ---------- barre d'outils ---------- */
 const gPen = document.getElementById('gPen'), gHl = document.getElementById('gHl'),
       gEra = document.getElementById('gEra'), gSel = document.getElementById('gSel'), gShp = document.getElementById('gShp');
-const popShapes = document.getElementById('popShapes');
+const popShapes = document.getElementById('popShapes'), gTxt = document.getElementById('gTxt');
 const pop = document.getElementById('pop');
 const popTitle = document.getElementById('popTitle'), popVal = document.getElementById('popVal');
 const popRange = document.getElementById('popRange'), popDot = document.getElementById('popDot');
@@ -1149,6 +1388,9 @@ function setTool(t) {
   gEra.classList.toggle('on', t === 'eraser');
   gSel.classList.toggle('on', t === 'sel');
   gShp.classList.toggle('on', t === 'shape');
+  gTxt.classList.toggle('on', t === 'text');
+  updateTextLayer();
+  if (t !== 'text') { const ws = window.getSelection(); if (ws && !ws.isCollapsed && tl.contains(ws.anchorNode)) ws.removeAllRanges(); }
   requestDraw();
 }
 
@@ -1266,6 +1508,7 @@ document.getElementById('bPen').onclick = () => { setTool('pen'); closePop(); };
 document.getElementById('bHl').onclick = () => { setTool('hl'); closePop(); };
 document.getElementById('bEra').onclick = () => { setTool('eraser'); closePop(); };
 document.getElementById('bShp').onclick = () => { setTool('shape'); closePop(); };
+document.getElementById('bTxt').onclick = () => { setTool('text'); closePop(); if (!pages.length) flash('Importez un PDF pour sélectionner son texte'); };
 document.getElementById('aShp').onclick = () => togglePop('shape', gShp);
 document.getElementById('bSel').onclick = () => { setTool('sel'); closePop(); };
 document.getElementById('aPen').onclick = () => togglePop('pen', gPen);
@@ -1433,7 +1676,7 @@ function fromB64(b) {
 async function save() {
   const data = {
     app: 'tableau-alpha', v: 3,
-    strokes: strokes.map(s => ({ c: s.color, w: s.w, h: s.hl ? 1 : 0, s: s.sh ? 1 : 0, p: s.pts.map(p => [+p[0].toFixed(2), +p[1].toFixed(2)]) })),
+    strokes: strokes.map(s => ({ c: s.color, w: s.w, h: s.hl ? 1 : 0, s: s.sh ? 1 : 0, b: s.cap === 'butt' ? 1 : 0, p: s.pts.map(p => [+p[0].toFixed(2), +p[1].toFixed(2)]) })),
     bg: bgMode,
     images: images.map(m => ({ src: m.src, x: +m.x.toFixed(2), y: +m.y.toFixed(2), w: +m.w.toFixed(2), h: +m.h.toFixed(2) })),
     view: { s: view.s, tx: view.tx, ty: view.ty },
@@ -1466,7 +1709,7 @@ async function save() {
 async function applyProject(d) {
   if (!d || d.app !== 'tableau-alpha' || !Array.isArray(d.strokes)) throw new Error('fichier non reconnu');
   const k = d.v === 2 ? 1 / ((d.view && d.view.s) || 1) : 1;   // version 2 : épaisseur enregistrée en pixels d'écran
-  strokes = d.strokes.map(s => mk(s.c, s.w * k, s.p, s.h, s.s));
+  strokes = d.strokes.map(s => { const st = mk(s.c, s.w * k, s.p, s.h, s.s); if (s.b) st.cap = 'butt'; return st; });
   if (d.bg) setBg(d.bg);
   undoStack = []; redoStack = []; sel = null;
   images = [];
@@ -1545,7 +1788,7 @@ if ('launchQueue' in window) {
 
 /* ---------- clavier ---------- */
 addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closePop(); closeMenu(); bgMenu.classList.remove('show'); if (sel && !selGesture) clearSel(); }
+  if (e.key === 'Escape') { closePop(); closeMenu(); bgMenu.classList.remove('show'); closeFind(); if (sel && !selGesture) clearSel(); }
   if (e.target && e.target.tagName === 'INPUT') return;   // on tape dans un champ
   if ((e.key === 'Delete' || e.key === 'Backspace') && sel) { deleteSelection(); e.preventDefault(); return; }
   if (e.key === 'Shift') shiftDown = true;
@@ -1557,6 +1800,8 @@ addEventListener('keydown', e => {
     else if (k === 's') { save(); e.preventDefault(); }
     else if (k === 'o') { openProject(); e.preventDefault(); }
     else if (k === 'd') { if (sel) duplicateSelection(); e.preventDefault(); }
+    else if (k === 'f') { openFind(); e.preventDefault(); }
+    else if (k === 'c' && textSelection()) { return; }
     return;
   }
   if (k === 'e') setTool('eraser');
@@ -1564,6 +1809,7 @@ addEventListener('keydown', e => {
   else if (k === 'h') setTool('hl');
   else if (k === 's') setTool('sel');
   else if (k === 'f') setTool('shape');
+  else if (k === 't') setTool('text');
 });
 addEventListener('keyup', e => { if (e.code === 'Space') spaceDown = false; if (e.key === 'Shift') shiftDown = false; });
 
