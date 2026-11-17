@@ -387,21 +387,27 @@ function drawStroke(c, st) {
   c.restore();
 }
 
-function draw() {
-  rafPending = false;
+// Pendant qu'on trace un trait, tout le reste de la scène est figé : on la garde en image
+// et on ne redessine que le trait en cours (beaucoup plus fluide avec un PDF et beaucoup de traits).
+let sceneVer = 0;
+const scene = { c: document.createElement('canvas'), key: '', live: null };
+function strokeOnScreen(st, x0, y0, x1, y1) {
+  const b = st.bb, m = st.w / 2;
+  return !(b[0] - m > x1 || b[2] + m < x0 || b[1] - m > y1 || b[3] + m < y0);
+}
+function drawScene(skip) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, cv.width, cv.height);
   drawBackground();
   ctx.setTransform(dpr * view.s, 0, 0, dpr * view.s, dpr * view.tx, dpr * view.ty);
 
+  const e = 1 / view.s;   // ombre des pages : quelques rectangles pâles (bien moins coûteux qu'un flou)
   for (const p of pages) {
     if (!isVisible(p)) continue;
-    ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,.28)';
-    ctx.shadowBlur = 10 * dpr;
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(p.x, p.y, p.w, p.h);
-    ctx.restore();
+    ctx.fillStyle = 'rgba(0,0,0,.05)'; ctx.fillRect(p.x - 3 * e, p.y - 2 * e, p.w + 6 * e, p.h + 6 * e);
+    ctx.fillStyle = 'rgba(0,0,0,.07)'; ctx.fillRect(p.x - 1.5 * e, p.y - 0.5 * e, p.w + 3 * e, p.h + 3 * e);
+    ctx.fillStyle = 'rgba(0,0,0,.12)'; ctx.fillRect(p.x - 0.5 * e, p.y, p.w + e, p.h + 1.5 * e);
+    ctx.fillStyle = '#fff'; ctx.fillRect(p.x, p.y, p.w, p.h);
     if (p.canvas) ctx.drawImage(p.canvas, p.x, p.y, p.w, p.h);
     else renderPage(p);
   }
@@ -409,7 +415,27 @@ function draw() {
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   for (const im of images) { if (im.el.complete && im.el.naturalWidth) ctx.drawImage(im.el, im.x, im.y, im.w, im.h); }
 
-  for (const st of strokes) drawStroke(ctx, st);
+  const x0 = -view.tx / view.s, y0 = -view.ty / view.s, x1 = (W - view.tx) / view.s, y1 = (H - view.ty) / view.s;
+  for (const st of strokes) if (st !== skip && strokeOnScreen(st, x0, y0, x1, y1)) drawStroke(ctx, st);
+}
+function draw() {
+  rafPending = false;
+  const live = drawing && drawing.st;
+  const key = live ? [view.s, view.tx, view.ty, cv.width, cv.height, bgMode, strokes.length, images.length, pages.length, sceneVer].join('|') : '';
+  if (live && scene.live === live && scene.key === key) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(scene.c, 0, 0);
+  } else {
+    drawScene(live);
+    if (live) {
+      if (scene.c.width !== cv.width || scene.c.height !== cv.height) { scene.c.width = cv.width; scene.c.height = cv.height; }
+      const sc = scene.c.getContext('2d');
+      sc.setTransform(1, 0, 0, 1, 0, 0); sc.clearRect(0, 0, cv.width, cv.height); sc.drawImage(cv, 0, 0);
+      scene.live = live; scene.key = key;
+    } else scene.live = null;
+  }
+  if (live) { ctx.setTransform(dpr * view.s, 0, 0, dpr * view.s, dpr * view.tx, dpr * view.ty); drawStroke(ctx, live); }
 
   if (tool === 'eraser' && hover && !panning) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -717,19 +743,22 @@ let shiftDown = false;
 
 /* ---------- PDF ---------- */
 function wantedRs(p) {
-  return Math.min(Math.max(view.s * dpr, 1) * 1.1, 4096 / Math.max(p.w, p.h), 6);
+  return Math.min(Math.max(view.s * dpr * 1.1, 0.25), 4096 / Math.max(p.w, p.h), 6);
 }
 
+function freePageCanvas(p) {
+  if (p.canvas) { p.canvas.width = 0; p.canvas.height = 0; p.canvas = null; }
+}
 function renderPage(p) {
   if (p.busy) return;
   const rs = wantedRs(p);
-  if (p.canvas && p.rs >= rs * 0.75) return;
+  if (p.canvas && p.rs >= rs * 0.75 && p.rs <= rs * 1.6) return;   // re-rendu si trop flou… ou trop lourd
   p.busy = true;
   const vp = p.pg.getViewport({ scale: rs });
   const c = document.createElement('canvas');
   c.width = Math.ceil(vp.width); c.height = Math.ceil(vp.height);
   p.pg.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise
-    .then(() => { p.canvas = c; p.rs = rs; p.busy = false; requestDraw(); })
+    .then(() => { freePageCanvas(p); p.canvas = c; p.rs = rs; p.busy = false; sceneVer++; requestDraw(); })
     .catch(() => { p.busy = false; });
 }
 
@@ -737,7 +766,12 @@ let refineTimer = null;
 function touchView() {
   requestDraw();
   clearTimeout(refineTimer);
-  refineTimer = setTimeout(() => { for (const p of pages) if (isVisible(p)) renderPage(p); }, 300);
+  refineTimer = setTimeout(() => {
+    for (const p of pages) {
+      if (isVisible(p)) renderPage(p);
+      else if (p.canvas && p.rs > wantedRs(p) * 1.6) freePageCanvas(p);   // page hors écran rendue en haute résolution : on libère la mémoire
+    }
+  }, 300);
 }
 
 async function loadPdfBytes(bytes) {
@@ -1764,7 +1798,7 @@ const fImg = document.getElementById('fImg');
 document.getElementById('bImg').onclick = () => fImg.click();
 fImg.onchange = () => { const fs = [...fImg.files]; fImg.value = ''; fs.forEach(importImageFile); };
 function loadImgEl(src) {
-  return new Promise((res, rej) => { const el = new Image(); el.onload = () => res(el); el.onerror = () => rej(new Error('image illisible')); el.src = src; });
+  return new Promise((res, rej) => { const el = new Image(); el.onload = () => { sceneVer++; res(el); }; el.onerror = () => rej(new Error('image illisible')); el.src = src; });
 }
 function readDataURL(f) {
   return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(f); });
