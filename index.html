@@ -135,6 +135,9 @@
   #boards{position:fixed;left:10px;bottom:10px;z-index:5;display:flex;align-items:center;gap:2px;padding:4px;
     background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.1)}
   #boards button{width:40px;height:40px;padding:0;font-size:22px;line-height:1}
+  #boards #bdDel svg{width:20px;height:20px}
+  #boards button:disabled{opacity:.3;cursor:default}
+  #boards button:disabled:hover{background:transparent}
   #boards .num{min-width:58px;text-align:center;font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
   #boards .num b{font-weight:600}
   #boards .num span{color:#777}
@@ -145,14 +148,17 @@
     z-index:6;pointer-events:none}
   #toast.show{opacity:.95}
   /* ---------- téléphones et tablettes ---------- */
-  #tbar{display:none}
+  #tbar{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);z-index:5;display:flex;align-items:center;gap:2px;padding:4px;
+    background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.1);max-width:calc(100vw - 20px);box-sizing:border-box}
+  #tbar .sep{margin:0 4px}
+  #toast{bottom:80px !important}
   .mobile #bar{grid-template-columns:auto 1fr auto;padding:0 4px;gap:2px;height:calc(52px + env(safe-area-inset-top));padding-top:env(safe-area-inset-top)}
   .mobile #bar .sep,.mobile #bFull,.mobile .pg button{display:none}
   .mobile button.ic{width:40px}
   .mobile .bc{gap:2px}
   .mobile .pg{margin-right:0;gap:4px}
   .mobile .pg input{width:44px}
-  .mobile #tbar{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;justify-content:center;align-items:center;gap:2px;
+  .mobile #tbar{position:fixed;left:0;right:0;bottom:0;transform:none;max-width:none;border:0;border-radius:0;z-index:5;display:flex;justify-content:center;align-items:center;gap:2px;
     padding:6px 4px calc(6px + env(safe-area-inset-bottom));background:rgba(255,255,255,.96);border-top:1px solid var(--line);
     box-shadow:0 -1px 10px rgba(0,0,0,.06);overflow-x:auto;scrollbar-width:none}
   .mobile #tbar::-webkit-scrollbar{display:none}
@@ -162,7 +168,7 @@
   .mobile #boards button{width:36px;height:36px}
   .mobile #boards .num{min-width:46px;font-size:14px}
   .mobile #st{display:none}
-  .mobile #toast{bottom:calc(130px + env(safe-area-inset-bottom))}
+  .mobile #toast{bottom:calc(130px + env(safe-area-inset-bottom)) !important}
   .mobile #find{left:8px;right:8px;top:calc(60px + env(safe-area-inset-top))}
   .mobile #find input{flex:1;width:auto;min-width:0}
   .mobile #find button{width:36px}
@@ -233,7 +239,7 @@
 <input type="file" id="fImg" accept="image/*" hidden>
 <input type="file" id="fJson" accept=".json,application/json" hidden>
 <div id="tbar"></div>
-<div id="boards"><button id="bdPrev" title="Tableau précédent" aria-label="Tableau précédent">‹</button><span class="num" id="bdNum"></span><button id="bdNext" title="Tableau suivant" aria-label="Tableau suivant">›</button><button id="bdAdd" title="Nouveau tableau" aria-label="Nouveau tableau">+</button></div>
+<div id="boards"><button id="bdPrev" title="Tableau précédent" aria-label="Tableau précédent">‹</button><span class="num" id="bdNum"></span><button id="bdNext" title="Tableau suivant" aria-label="Tableau suivant">›</button><button id="bdAdd" title="Nouveau tableau" aria-label="Nouveau tableau">+</button><button id="bdDel" class="ic" title="Supprimer ce tableau" aria-label="Supprimer ce tableau"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button></div>
 <div id="st"></div>
 <div id="toast"></div>
 
@@ -867,11 +873,13 @@ function updateBoardBar() {
   document.getElementById('bdPrev').disabled = boardIdx === 0;
   document.getElementById('bdNext').disabled = boardIdx === boards.length - 1;
   document.getElementById('bDelBoard').disabled = boards.length < 2;
+  document.getElementById('bdDel').disabled = boards.length < 2;
 }
 document.getElementById('bdPrev').onclick = () => gotoBoard(boardIdx - 1);
 document.getElementById('bdNext').onclick = () => gotoBoard(boardIdx + 1);
 document.getElementById('bdAdd').onclick = addBoard;
-for (const id of ['bdPrev', 'bdNext', 'bdAdd']) document.getElementById(id).addEventListener('pointerdown', e => e.stopPropagation());
+document.getElementById('bdDel').onclick = deleteBoard;
+for (const id of ['bdPrev', 'bdNext', 'bdAdd', 'bdDel']) document.getElementById(id).addEventListener('pointerdown', e => e.stopPropagation());
 
 /* ---------- zoom / déplacement ---------- */
 function zoomAt(cx, cy, k) {
@@ -2025,9 +2033,15 @@ addEventListener('keydown', e => {
 });
 addEventListener('keyup', e => { if (e.code === 'Space') spaceDown = false; if (e.key === 'Shift') shiftDown = false; });
 
-if (IS_MOBILE) {
+{
+  // outils en bas de l'écran ; sur ordinateur, annuler / rétablir aussi (sur téléphone ils restent en haut, faute de place)
   const tb = document.getElementById('tbar');
   for (const id of ['gPen', 'gHl', 'gShp', 'gEra', 'gSel', 'gTxt']) tb.appendChild(document.getElementById(id));
+  if (!IS_MOBILE) {
+    const sep = document.querySelector('#bar .bl .sep');
+    if (sep) tb.appendChild(sep);
+    tb.appendChild(document.getElementById('bUndo')); tb.appendChild(document.getElementById('bRedo'));
+  }
   tb.addEventListener('click', e => { const b = e.target.closest('button'); if (b) b.blur(); });
 }
 addEventListener('resize', resize);
