@@ -124,7 +124,12 @@
   #pop .row{display:flex;align-items:center;justify-content:space-between;font-size:14px;
     color:var(--ink);margin-bottom:6px}
   #pop .val{font-variant-numeric:tabular-nums;color:#777}
-  #pop input[type=range]{width:100%;height:36px;margin:0;accent-color:#2450c8}
+  #pop .stepper{display:flex;align-items:center;gap:8px}
+  #pop .stepper button{width:56px;height:52px;flex:none;padding:0;font-size:30px;line-height:1;font-weight:500;
+    border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);touch-action:none;user-select:none}
+  #pop .stepper button:active{background:var(--hover)}
+  #pop .stepper button:disabled{opacity:.35}
+  #pop .stepper .sv{flex:1;text-align:center;font-size:20px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
   #pop .prev{height:72px;display:flex;align-items:center;justify-content:center}
   #pop .dot{display:block;border-radius:50%;flex:none;box-sizing:border-box}
   #boards{position:fixed;left:10px;bottom:10px;z-index:5;display:flex;align-items:center;gap:2px;padding:4px;
@@ -217,7 +222,7 @@
 <div id="pop">
   <div class="shapes" id="popShapes"><button data-shape="line" title="Ligne" aria-label="Ligne"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5"/></svg></button><button data-shape="arrow" title="Flèche" aria-label="Flèche"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5"/><path d="M9 5h10v10"/></svg></button><button data-shape="rect" title="Rectangle" aria-label="Rectangle"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="14" x="3" y="5" rx="1"/></svg></button><button data-shape="ellipse" title="Ellipse" aria-label="Ellipse"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="10" ry="7.5"/></svg></button></div>
   <div class="row"><span id="popTitle"></span><span class="val" id="popVal"></span></div>
-  <input type="range" id="popRange" min="1" max="40" step="1" value="3">
+  <div class="stepper" id="popRange"><button id="popMinus" title="Plus petit" aria-label="Plus petit">−</button><span class="sv" id="popSv"></span><button id="popPlus" title="Plus gros" aria-label="Plus gros">+</button></div>
   <div class="hint" id="popHint"></div>
   <div class="prev" id="popPrev"><span class="dot" id="popDot"></span></div>
   <div class="colors" id="popColors"></div>
@@ -301,7 +306,7 @@ let images = [];                        // images importées : { el, src, x, y, 
 let undoStack = [], redoStack = [];
 let tool = 'pen';                       // 'pen' | 'hl' | 'eraser'
 let penColor = '#111111', hlColor = '#ffd43b';
-let penPx = 3, hlPx = 18, eraserPx = 48, shapePx = 3;
+let penPx = 2, hlPx = 18, eraserPx = 48, shapePx = 3;
 let shapeColor = '#111111', shapeKind = 'line';   // 'line' | 'arrow' | 'rect' | 'ellipse'
 let bgMode = 'plain';                    // 'plain' | 'grid' | 'dots' | 'lines' | 'iso'   // stylo et surligneur : px à 100 % de zoom (suivent le zoom) ; gomme : px à l'écran
 
@@ -1602,7 +1607,10 @@ function updatePop() {
   if (popFor === 'sel') return;
   const v = getSize(popFor);
   const fmt = x => String(Math.round(x * 10) / 10).replace('.', ',');
-  popVal.textContent = v + ' px';
+  popVal.textContent = '';
+  document.getElementById('popSv').textContent = v + ' px';
+  document.getElementById('popMinus').disabled = v <= SIZE_STEPS[popFor][0];
+  document.getElementById('popPlus').disabled = v >= SIZE_STEPS[popFor][SIZE_STEPS[popFor].length - 1];
   let shown = v, hint = '';
   if (popFor !== 'eraser') {
     shown = v * view.s;   // taille réellement visible au zoom actuel
@@ -1629,7 +1637,6 @@ function openPop(which, anchor) {
   if (which === 'shape') updateShapes();
   if (isSel) { popVal.textContent = ''; popColors.style.display = 'none'; updateModes(); }
   else {
-    popRange.min = cfg.min; popRange.max = cfg.max; popRange.value = getSize(which);
     buildColors(); updatePop();
   }
   pop.classList.add('show');
@@ -1684,11 +1691,31 @@ document.getElementById('aPen').onclick = () => togglePop('pen', gPen);
 document.getElementById('aHl').onclick = () => togglePop('hl', gHl);
 document.getElementById('aEra').onclick = () => togglePop('eraser', gEra);
 document.getElementById('aSel').onclick = () => togglePop('sel', gSel);
-popRange.oninput = () => {
-  const v = +popRange.value;
-  if (popFor === 'eraser') eraserPx = v; else if (popFor === 'hl') hlPx = v; else if (popFor === 'shape') shapePx = v; else penPx = v;
-  updatePop(); requestDraw();
+// Taille : boutons − et + (un appui = un cran ; garder appuyé fait défiler)
+const SIZE_STEPS = {
+  pen:    [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40],
+  shape:  [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40],
+  hl:     [6, 8, 10, 12, 15, 18, 22, 26, 30, 36, 45, 55, 65, 80],
+  eraser: [10, 15, 20, 25, 30, 40, 48, 60, 80, 100, 130, 160, 200]
 };
+function stepSize(dir) {
+  if (!popFor || popFor === 'sel') return;
+  const list = SIZE_STEPS[popFor], v = getSize(popFor);
+  const nv = dir > 0 ? (list.find(x => x > v) ?? list[list.length - 1]) : ([...list].reverse().find(x => x < v) ?? list[0]);
+  if (popFor === 'eraser') eraserPx = nv; else if (popFor === 'hl') hlPx = nv; else if (popFor === 'shape') shapePx = nv; else penPx = nv;
+  updatePop(); requestDraw();
+}
+for (const [id, dir] of [['popMinus', -1], ['popPlus', 1]]) {
+  const b = document.getElementById(id);
+  let t1 = null, t2 = null;
+  const stop = () => { clearTimeout(t1); clearInterval(t2); t1 = t2 = null; };
+  b.addEventListener('pointerdown', e => {
+    e.preventDefault(); stop(); stepSize(dir);
+    t1 = setTimeout(() => { t2 = setInterval(() => stepSize(dir), 140); }, 450);
+  });
+  for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, stop);
+  b.addEventListener('click', e => { if (e.detail === 0) stepSize(dir); });   // clavier (Entrée / Espace)
+}
 // un appui n'importe où ailleurs ferme les fenêtres
 document.addEventListener('pointerdown', e => {
   if (popFor && !pop.contains(e.target) && !e.target.closest('.arrow')) closePop();
